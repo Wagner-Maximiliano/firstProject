@@ -1,4 +1,4 @@
-# Human Runbook — Building Helm Across Many Sessions
+# Human Runbook — Building the Autonomous Agent Framework Across Many Sessions
 
 > **This is your home base.** You don't need to write code or understand it. Your job is to start sessions, paste the right prompt, answer the occasional plain-language question, test screens when asked, and approve go-live. Everything the AI needs to keep going is stored in the repo, so it can pick up across as many sessions as it takes.
 
@@ -30,8 +30,8 @@ Because every session saves its progress to the repo, **it never forgets where i
 ### ▶ KICKOFF prompt — paste this for the FIRST session only
 
 ```
-You are the build agent for a multi-session project: building the "Helm" autonomous agent
-framework described in this repository. This is session 1 of many.
+You are the build agent for a multi-session project: building the autonomous agent framework
+described in this repository (built on top of Hermes). This is session 1 of many.
 
 Before doing anything else, read these files in full:
 - docs/autonomous-agents/build/SESSION_PROTOCOL.md   (how every session must operate — follow it exactly)
@@ -54,7 +54,7 @@ me which task you'll tackle this session.
 ### ▶ RESUME prompt — paste this for EVERY session after the first (always the same)
 
 ```
-You are the build agent continuing a multi-session build of the "Helm" framework in this repo.
+You are the build agent continuing a multi-session build of the autonomous agent framework in this repo.
 Assume NO memory of previous sessions — the repo is your memory.
 
 First, read in full:

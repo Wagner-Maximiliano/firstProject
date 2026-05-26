@@ -1,6 +1,6 @@
-# Helm — Autonomous Agent Framework (V1 Pilot)
+# Autonomous Agent Framework — Hermes-based V1 Pilot
 
-This repository contains the design and build plan for **Helm**, a multi-agent orchestration system that drives software projects from idea to shipping with minimal human involvement.
+This repository contains the design and build plan for an **autonomous multi-agent orchestration system** built on top of **Hermes** (`hermes-agent`). It drives software projects from idea to shipping with minimal human involvement — the human is only needed at planning, screen testing, and go-live approval.
 
 ## Quick Start
 
@@ -29,7 +29,7 @@ The agent will guide itself from there using the files above.
 
 ### Configuration (tier→model mapping)
 
-Once building starts, you'll have a `config/helm.yaml` file that maps model tiers to actual providers:
+Once building starts, you'll have a `config/settings.yaml` file that maps model tiers to actual providers:
 
 ```yaml
 tiers:
@@ -56,7 +56,7 @@ board:                   # 3-vendor approval board
 ```
 
 **To adjust tiers** (e.g. upgrade builders to T2–T3, make Planner/Board T4):
-1. Edit `config/helm.yaml` — change the model names and which roles use which tiers.
+1. Edit `config/settings.yaml` — change the model names and which roles use which tiers.
 2. Restart the agents; they'll pick up the new routing automatically.
 3. No code changes needed — the tiers are configuration, not hardcoded.
 
@@ -91,7 +91,7 @@ prompts/
   reviewer.md              # Gatekeeper: PR approval
   board_member.md          # One of three board seats
 
-helm/                      # (created during build)
+core/                      # (created during build)
   gateway/                 # Model routing over Hermes
   agents/                  # Agent implementations
   orchestrator/            # Task scheduling, Kanban sync
@@ -143,4 +143,4 @@ These must all be green on the build branch before merging to `main`.
 
 ---
 
-**Status:** Planning & design complete. Ready for V1 pilot build. Start with the KICKOFF prompt in `HUMAN_RUNBOOK.md`.
+**Status:** Planning & design complete. Ready for V1 pilot build. Start with the KICKOFF prompt in `docs/autonomous-agents/build/HUMAN_RUNBOOK.md`.

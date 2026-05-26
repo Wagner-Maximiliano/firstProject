@@ -1,7 +1,7 @@
 # Session Protocol — How Every Build Session Must Operate
 
 > **Audience: the build agent (you, in a fresh session).** Read this in full at the start of every session and follow it exactly.
-> **Why this exists:** building Helm spans many sessions. No session remembers the last one. This protocol makes the repo — not your chat history — the memory, so any fresh session can pick up cleanly and nothing is lost.
+> **Why this exists:** building this framework spans many sessions. No session remembers the last one. This protocol makes the repo — not your chat history — the memory, so any fresh session can pick up cleanly and nothing is lost.
 
 ---
 

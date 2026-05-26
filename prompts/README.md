@@ -1,6 +1,6 @@
 # Agent Job Descriptions (system prompts)
 
-These are **starter drafts** of the instructions each AI worker in Helm follows. The build sessions will refine them as the code that calls them takes shape (task B1-1 onward) — but starting from these keeps every agent aligned with the design in `../docs/autonomous-agents/FRAMEWORK_SPEC.md` instead of inventing behaviour from scratch.
+These are **starter drafts** of the instructions each AI worker in the autonomous agent framework follows. The build sessions will refine them as the code that calls them takes shape (task B1-1 onward) — but starting from these keeps every agent aligned with the design in `../docs/autonomous-agents/FRAMEWORK_SPEC.md` instead of inventing behaviour from scratch.
 
 | File | Worker | Tier | Governed by (spec §) |
 |---|---|---|---|
