@@ -10,7 +10,7 @@
 
 These are the rules every part of the system must obey. They are derived directly from the project brief.
 
-1. **Human touches only the plan.** After the plan is signed off, the system runs autonomously. Humans are pulled back in *only* when an issue is genuinely unrecoverable or a guardrail demands it.
+1. **Human touchpoints are few and defined.** There are exactly three: **(a)** planning + sign-off, **(b)** hands-on testing of any graphical UI, per phase, and **(c)** go-live approval. Beyond these, the system runs autonomously and pulls the human back in *only* when an issue is genuinely unrecoverable or a guardrail demands it.
 2. **Trunk is sacred.** No agent ever commits to `main`/`master`. All work happens on branches; trunk changes only via reviewed, approved, CI-green pull requests through a merge queue.
 3. **Scripts before models.** Any task that can be done deterministically by code (git ops, linting, formatting, test runs, board moves, status checks, health pings) is done by code — never by a model call. Models are reserved for reasoning.
 4. **Cheapest capable model wins.** Work is routed to the lowest-cost model that can do it well. Escalation to expensive models is the exception, triggered by measured complexity/risk — not the default.
@@ -18,7 +18,11 @@ These are the rules every part of the system must obey. They are derived directl
 6. **The system must not stall.** Heartbeats, watchdogs, and recovery logic keep work flowing through disconnections, rate limits, token exhaustion, and stuck PRs — without waking the human.
 7. **Quality is not sacrificed for cost.** Cost optimization stops at the line where product quality would suffer.
 8. **Everything is legible.** Code is commented for handover (the *why*, not the *what*), decisions are recorded as ADRs, and the repo is the single source of truth.
-9. **Portability.** The orchestration core is decoupled from any single vendor or hosting platform via a model-gateway abstraction. We focus on one implementation now, but lock-in is avoided by design.
+9. **Portability.** The orchestration core is decoupled from any single vendor or hosting platform via a model-gateway abstraction. We focus on one implementation now (Hermes — see §16), but lock-in is avoided by design.
+10. **Go-live is human-gated.** Nothing reaches real users without explicit human approval (rule #1c). The system may build, test internally, and stage freely — but the final release switch is the human's.
+11. **GUIs are always human-tested.** Anything with a graphical interface is verified by a human, because machines can't yet judge a UI the way a user does. Every phase ships a plain-language **human test guide** plus an isolated, ready-to-run **test environment** (rule #1b).
+12. **The project must survive many sessions.** No single conversation/context window holds the project together. All durable state lives in the repo and an external store, so the system can be stopped, resumed, or moved without losing the plot or overflowing context.
+13. **Live within subscription limits.** There is no dollar budget; there are *quota windows* (notably rolling 5-hour usage caps on paid Anthropic/OpenAI tiers). The system prefers free/cheap models and actively manages those windows so it never gets throttled mid-flight.
 
 ---
 
@@ -33,7 +37,8 @@ These are the rules every part of the system must obey. They are derived directl
 | **ADR** | Architecture Decision Record — a short markdown file capturing a decision + rationale. |
 | **Lease** | A short-lived lock an agent holds on a file/area to prevent concurrent edits. |
 | **Heartbeat** | A periodic scripted health check that emits a signal and triggers recovery on silence. |
-| **Gateway** | The model-router abstraction; the only component that knows vendor SDKs/keys. |
+| **Gateway** | The model-router abstraction; the only component that knows vendor SDKs/keys. **Played by Hermes** (§16). |
+| **Quota window** | A vendor's rolling usage cap (e.g. the ~5-hour caps on paid Anthropic/OpenAI tiers). The scarce resource we manage instead of dollars. |
 
 ---
 
@@ -66,8 +71,8 @@ These are the rules every part of the system must obey. They are derived directl
                   └──────────────────────────────────────────────────┘
 
       ╔══════════════════════════════════════════════════════════════╗
-      ║  ALWAYS-ON: Watchdog/Heartbeat (scripts) + Budget Guard +      ║
-      ║  Model Gateway (vendor abstraction) + Telemetry/Audit log      ║
+      ║  ALWAYS-ON: Watchdog/Heartbeat (scripts) + Quota Guard +       ║
+      ║  Hermes (model routing/gateway) + Telegram + Telemetry/Audit   ║
       ╚══════════════════════════════════════════════════════════════╝
 ```
 
@@ -129,7 +134,7 @@ An agent does **not** silently struggle. It escalates on explicit triggers:
 1. **Self-confidence below threshold** (agent reports `confidence < 0.7` on its own output) → escalate one tier.
 2. **N failed attempts** (default N=2: e.g. tests still red after 2 fix cycles) → escalate one tier.
 3. **Touches a board-criteria area** (see §7) → go to Board, skip tiers.
-4. **Budget guard says "downgrade"** → forced de-escalation (with a flag that quality risk was accepted) or pause.
+4. **Quota Guard says "downgrade"** (paid window nearly spent) → forced de-escalation to a free model (with a flag that quality risk was accepted) or defer until the window resets.
 
 Escalation always carries the full context bundle (task, attempts, errors) so the higher tier doesn't restart from zero.
 
@@ -181,12 +186,11 @@ Everything else proceeds without the Board — most day-to-day coding does **not
 
 ### 7.2 Board composition
 
-3–4 **independent** members drawn from **different vendors** (using your separate keys):
+**Three** independent seats, each a frontier model from a **different vendor** (using your separate keys). Three is deliberate: it's the minimum for real cross-checking, it breaks ties naturally (no deadlock from an even split), and it's the cheapest configuration that still gives vendor diversity.
 
 - Seat A: Anthropic frontier (e.g. Opus)
 - Seat B: OpenAI frontier
-- Seat C: a strong OpenRouter model (different lineage)
-- (Optional) Seat D: a 4th vendor / open model for odd-numbered quorum and diversity
+- Seat C: a strong third-vendor model of a different lineage (via OpenRouter or direct)
 
 Vendor diversity is the point: correlated blind spots within one vendor are reduced when reviewers come from different training lineages.
 
@@ -206,12 +210,14 @@ Vendor diversity is the point: correlated blind spots within one vendor are redu
 
 ### 7.4 Voting & tie-breaks
 
+With three seats:
+
 | Outcome | Rule |
 |---|---|
-| **Approved** | Quorum met (e.g. ≥3 seats) **and** supermajority agree (e.g. ≥75%). |
+| **Approved** | **Unanimous (3/3)** for irreversible/security/data decisions; **2-of-3** for other big decisions. |
 | **Approved w/ conditions** | Majority approve but raise must-fix objections → conditions attached to the task. |
-| **Split / low-confidence** | No supermajority → escalate: (a) one more analysis round with more context, then (b) if still split, **human** is asked a single, well-framed question. |
-| **Rejected** | Supermajority against → proposal returns to Planner/Builder with the consolidated objections. |
+| **Split / low-confidence** | A 2-1 split on an irreversible/high-risk call counts as *not confident* → escalate: (a) one more analysis round with more context, then (b) if still split, the **human** is asked a single, well-framed question (via Telegram, §11.5). |
+| **Rejected** | Majority against → proposal returns to Planner/Builder with the consolidated objections. |
 
 A split board is a *feature*: it is the system honestly reporting "we are not confident," which is exactly when a human (or more thought) is warranted.
 
@@ -317,7 +323,7 @@ while project.not_complete():
 
     # 3. health + budget (delegated to always-on watchdog, see §11)
     watchdog.tick()
-    budget_guard.tick()
+    quota_guard.tick()
 
     sleep_until_next_event()   # event-driven; no busy-wait, no wasted tokens
 ```
@@ -340,9 +346,10 @@ This is the always-on layer that satisfies "the project doesn't get stale" and "
 | Symptom | Detection (T0) | Recovery |
 |---|---|---|
 | Agent silent / hung | Heartbeat stale | Kill + re-spawn task with saved context |
-| Model/vendor disconnect | API error / timeout | **Failover** to alternate vendor in same tier via Gateway (§16) |
-| Rate limit hit | 429 / quota error | Backoff + reroute to alternate vendor; queue task |
-| **Token/budget exhaustion** | Budget Guard meter | Downgrade tier where safe; pause low-priority streams; alert if hard cap |
+| Model/vendor disconnect | API error / timeout | **Failover** to alternate vendor in same tier via Hermes (§16) |
+| Rate limit hit | 429 / quota error | Backoff + reroute to a **free** model or alternate vendor; queue task |
+| **5-hour window nearing cap** | Quota & Rate Guard meter (§11.4) | Drain remaining paid-tier budget toward only the highest-value work; route everything else to free models; defer deferrable tasks until the window resets |
+| **Window exhausted** | 429 / window-reset timestamp | Pause that vendor's tier until reset; continue on free/other-vendor models; no human alert (expected, not a failure) |
 | Stuck PR | Idle > threshold | Nudge reviewer / reassign / rebase |
 | Failing CI loop | N consecutive red | Escalate tier; if still red, mark Blocked + open diagnostic issue |
 | Infinite/oscillating fix loop | Repeated near-identical diffs | Circuit-breaker: stop, escalate to T3/Board |
@@ -352,19 +359,35 @@ This is the always-on layer that satisfies "the project doesn't get stale" and "
 
 ```
 retry (same model, backoff)
-   → failover (alternate vendor, same tier)        # Gateway
+   → failover (alternate vendor, same tier)        # Hermes
+   → re-route to a free model where quality allows  # quota-aware
    → re-queue (return task to Ready, fresh worktree)
    → escalate tier (more capable model)
    → circuit-break + open diagnostic issue
-   → human alert (LAST resort, with full context)
+   → human alert via Telegram (LAST resort, with full context)
 ```
 
-### 11.4 Budget Guard
+### 11.4 Quota & Rate Guard (you have no $ budget — you have *windows*)
 
-- Tracks spend per task / stream / phase / project against caps.
-- Soft cap → prefer cheaper tiers, throttle parallelism.
-- Hard cap → pause non-critical streams, alert human.
-- Per-vendor spend tracked separately (you have separate keys) for cost attribution.
+You run the **cheapest subscription tier on every vendor**, so the real constraint isn't dollars, it's **rolling usage windows** (notably the ~5-hour caps on paid Anthropic/OpenAI tiers) plus free-model availability. The guard manages *windows*, not spend:
+
+- **Tracks usage per vendor against its rolling window** (tokens/requests used in the current 5-hour bucket, and time until reset). Hermes' provider layer (§16) surfaces the signals; the guard meters them.
+- **Free-first routing.** Default the high-volume T1 work to free models (OpenRouter free tier, free NVIDIA models, local/Ollama OSS) so paid windows are conserved.
+- **Window-budgeting.** Each paid vendor's window is a scarce resource spent only on work that genuinely needs that tier (T2/T3, Board). The guard reserves headroom so a window is never fully drained by low-value work.
+- **Soft threshold** (e.g. 70% of a window used) → stop sending anything but the highest-value tasks to that vendor; everything else goes free/other-vendor.
+- **Window hit** → pause that vendor's tier, keep working on free/other models, and resume automatically when the window resets — **no human alert**, because this is expected operation, not a failure.
+- **Per-vendor metering** (separate keys) so each provider's window is tracked independently and the Board can always be assembled from whichever vendors still have headroom.
+
+### 11.5 Human escalation channel: Telegram
+
+The single channel for the rare "we need a human" moment is **Telegram** (the same kind of messaging bridge Hermes/OpenClaw already support). The Watchdog and the planning agents post to it. Each escalation message is self-contained so you can decide from your phone:
+
+- **What/why:** one line on what's blocked and why a human is needed.
+- **Context:** links to the issue/PR/ADR and the relevant log excerpt.
+- **The ask:** a specific question, ideally as tappable options (approve / reject / pick A or B), not an open essay prompt.
+- **Patience window:** the Watchdog knows how long it may safely wait (a config you set) before pausing the affected stream — so escalations don't silently rot, and the rest of the project keeps moving meanwhile.
+
+Used for: split Board on an irreversible call (§7.4), GUI test sign-off (§14b), go-live approval (§10), and unrecoverable failures only.
 
 ---
 
@@ -374,6 +397,7 @@ retry (same model, backoff)
 |---|---|
 | **Scripts-first (rule #3)** | The single biggest saver. No model call for anything deterministic. |
 | **Tiered routing (§5)** | Cheap/free models do the high-volume low-reasoning work. |
+| **Free-first + window-aware routing (§11.4)** | Default to free models; spend scarce paid 5-hour windows only on T2/T3/Board work. |
 | **Prompt caching** | Cache stable context (system prompts, repo conventions, plan) across calls. |
 | **Context minimization** | Agents get only the files/diffs they need (retrieval), never the whole repo. |
 | **Event-driven loop** | No polling-by-model; the orchestrator waits on webhooks/CI events. |
@@ -440,32 +464,98 @@ Per your question — **yes, a cheap model (T1/Haiku-class) is the front door.**
 
 ---
 
-## 15. State, memory & observability
+## 14b. Human testing & per-phase test guides
 
-- **Source of truth = the repo + GitHub:** issues (tasks), PRs (work), Projects board (status), ADRs (decisions), plan docs (intent). An agent can be killed and respawned and rebuild its understanding from these.
-- **Orchestrator state store:** lightweight DB/file for the DAG, leases, heartbeats, budget meters, event log. Append-only event log = full audit trail.
-- **Observability:** dashboards for stream status, cost per tier/vendor/phase, board decisions, recovery events. Everything an operator needs to trust the system without intervening.
+Machines can run tests, but they cannot yet *judge a graphical interface the way a user does*. So anything with a GUI is verified by a human — this is human touchpoint (b) from rule #1. The system's job is to make that as painless and foolproof as humanly possible.
+
+### 14b.1 An isolated test environment per project
+
+Every project ships a **ready-to-run, isolated test environment** so a non-developer can launch it without setup pain:
+
+- A self-contained environment (e.g. a Python **`.venv`** for Python projects; the equivalent isolated, pinned environment for other stacks) with all dependencies pinned and installable by **one script**.
+- A single **`run-test-env`** entry script that sets up (if needed) and launches the thing-to-test.
+- Seeded sample data / fixtures so the human sees something realistic, not an empty shell.
+- The environment is disposable and reproducible — it never touches production or real data.
+
+### 14b.2 A test guide for every phase
+
+At the end of every phase, the system generates a **plain-language test guide** (mostly assembled by T0/T1 from the phase's tasks and acceptance criteria — cheap to produce). Each guide has exactly these sections:
+
+1. **What was done** — in plain language, what this phase added or changed.
+2. **How to run it** — the literal command(s)/clicks to start the test environment.
+3. **What to check** — a short checklist of things to look at or do.
+4. **What you should see** — the expected result for each check (screenshots/examples where useful).
+5. **If it doesn't match** — what to do when reality differs: how to report it (one tap in Telegram), what info to include, and that the system will diagnose and re-fix automatically.
+
+The guide is written for someone with **no development skills**: no jargon, numbered steps, and a clear pass/fail for each item.
+
+### 14b.3 The GUI verification loop
+
+```
+phase build complete (non-GUI checks already green)
+  → system generates test guide + boots the test environment
+  → posts guide to the human via Telegram (§11.5): "Phase X ready to test"
+  → human follows steps, taps PASS or FAIL(+note) per checklist item
+  → PASS → phase accepted, Kanban → Done, next phase scheduled
+  → FAIL → the human's note becomes an issue; Builder/Reviewer diagnose,
+            fix, re-verify automation, regenerate guide, re-request test
+```
+
+Non-GUI behavior is still verified automatically (tests, builds) and does *not* require this loop — only the human-perceivable UI does. This keeps the human's involvement bounded to exactly what only a human can judge.
 
 ---
 
-## 16. Recommended tech stack (my advice on "Hermes" / portability)
+## 15. State, memory, multi-session survival & observability
 
-> **Open question — please confirm:** by "Hermes" did you mean **Nous Research's Hermes models** (which I'd slot in as a capable T1/T2 or a Board seat via OpenRouter), or a specific **orchestration platform** named Hermes? My recommendation below is designed so that either answer fits without rework.
+### 15.1 Single source of truth
 
-**Recommendation — a thin portable core + a vendor gateway:**
+- **The repo + GitHub:** issues (tasks), PRs (work), Projects board (status), ADRs (decisions), plan docs (intent). An agent can be killed and respawned and rebuild its understanding from these.
+- **Orchestrator state store:** lightweight DB/file for the DAG, leases, heartbeats, quota meters, event log. Append-only event log = full audit trail.
 
-1. **Model Gateway (the key to portability).** A single abstraction layer (e.g. a LiteLLM-style router, or a small custom adapter) is the *only* component that holds vendor SDKs and keys. Every agent calls "give me a T2 model," not "call OpenAI." This delivers:
-   - **No lock-in** — swap vendors/models via config, satisfying "don't want to be stuck in one place."
-   - **Failover** — the Watchdog reroutes across vendors automatically (§11.2).
-   - **Multi-vendor Board** — trivial, since the gateway already speaks to all of them.
+### 15.2 Surviving many sessions without context overload (rule #12)
 
-2. **Orchestration core.** Keep it small and own the critical logic (DAG, scheduling, leases, merge queue, heartbeats). You may build this on a lightweight existing framework for the state-machine/graph parts, but the *business rules above* should be yours so you're not captive to a framework's roadmap.
+No conversation/context window is allowed to *be* the project's memory — windows are treated as disposable scratch space. This is what lets the system run for days/weeks across countless sessions:
 
-3. **Execution substrate.** Run agents wherever you like; the gateway makes the choice reversible. For "focus in one place for now," pick a single host/runtime and a single repo for the orchestrator — breadth can come later precisely because the gateway abstracts it.
+- **Externalized state.** Everything durable lives in the repo + state store above, never only in a chat transcript. Any agent, any session, reconstructs context by *reading*, not by *remembering*.
+- **Per-task context, freshly assembled.** When a task starts, the orchestrator hands the agent a small, purpose-built context pack (the task, the relevant files/diffs, the relevant ADRs) — not the whole history. Most tasks fit comfortably in a small window.
+- **Compression + session persistence via Hermes.** Hermes natively compresses long conversations and persists sessions (§16); long-running agents summarize-and-checkpoint rather than letting raw history grow unbounded.
+- **Rolling summaries / handoff notes.** Each stream keeps a short, current "state of this stream" note (regenerated cheaply by T1) so a resumed or replacement agent is oriented in one read.
+- **Checkpoint & resume.** Progress is committed frequently (draft PRs, WIP commits) so an interrupted task resumes from the last checkpoint, not from scratch — essential given the 5-hour windows (§11.4) that *will* pause work mid-stream.
+- **Idempotent, resumable steps.** Re-running a step after a restart is safe and doesn't duplicate work.
 
-4. **GitHub** for trunk protection, PRs, Projects/Kanban, and CI — these are the scripted, model-free backbone.
+The test: **you could shut the whole system off and turn it back on tomorrow, and it would pick up exactly where it left off — because nothing important ever lived only in a model's head.**
 
-The spirit of your constraint ("one place for now, but not stuck there") is satisfied structurally: **one implementation, zero lock-in, because vendor/runtime choices live behind the gateway.**
+### 15.3 Observability
+
+Dashboards for stream status, quota-window headroom per vendor, board decisions, recovery events, and pending human asks. Everything an operator needs to trust the system without intervening.
+
+---
+
+## 16. Tech stack — Hermes as the substrate
+
+**Confirmed:** "Hermes" = **Nous Research's `hermes-agent`** — an orchestration "saddle" that sits on top of the models (the same category as OpenClaw). This is a strong fit and becomes our chosen substrate. What Hermes gives us out of the box maps almost one-to-one onto this spec:
+
+| This spec needs… | Hermes provides… |
+|---|---|
+| Model Gateway / vendor abstraction (§5, portability) | Provider selection across 100+ models / 200+ providers (Anthropic, OpenAI, OpenRouter, xAI, Gemini, Ollama, vLLM, llama.cpp, LM Studio…) |
+| Role/tier routing (§4–5) | A primary reasoning model **+ 8 specialized task slots**, each pointing at its own provider/model/credentials — map our tiers/roles onto these slots |
+| Watchdog failover (§11.2–11.3) | Built-in retries + fallback logic |
+| Multi-session survival, no context overload (§12, §15.2) | Conversation **compression** + **session persistence** |
+| Multi-vendor Board (§7) | Trivial — Hermes already speaks to every vendor; the 3 seats are just 3 provider configs |
+| Human channel (§11.5) | Messaging bridges (Telegram), as with OpenClaw |
+| Agent configuration (§4) | Personality files + skills + memory + context assembly per agent |
+
+**How the layers stack:**
+
+1. **Hermes = the agent/runtime + gateway layer.** Vendor keys, model routing, per-task slots, retries/fallback, compression, session persistence, messaging — all configured here. Agents are Hermes configs (personality + skills + slot routing + guardrails).
+
+2. **Our orchestration logic sits *above* Hermes.** Hermes runs and routes individual agents; it does **not** know about our DAG scheduling, file leases, merge queue, Kanban automation, quota-window guard, or Board voting. Those are *our* scripts/state machine driving Hermes. Keeping this thin layer ours is what prevents lock-in: if we ever outgrow Hermes, only the runtime swaps — the business rules stay.
+
+3. **GitHub = the model-free backbone** for trunk protection, PRs, Projects/Kanban, and CI.
+
+**On "one place now, not stuck there":** Hermes itself is multi-provider by design, so committing to it does **not** lock you to any one model vendor — and because our orchestration rules live above it, even the runtime is replaceable later. You get a single place to focus today with the portability you asked for baked in.
+
+> **Validation to do during Phase 0:** confirm Hermes' 8-slot model is enough granularity for our role set (it should map cleanly: primary→Planner/Builder, slots→Reviewer/QA/triage/summarize/etc.), and confirm its session-persistence format is something our state store can checkpoint against.
 
 ---
 
@@ -473,7 +563,7 @@ The spirit of your constraint ("one place for now, but not stuck there") is sati
 
 - **Least privilege:** agent tokens scoped narrowly; no direct `main` push; secrets never in prompts or logs (secret-scanning in CI).
 - **Sandboxed execution:** builders run in isolated, ephemeral environments.
-- **Human-required boundaries:** production deploys, spending real money, deleting data, and external communications require explicit human authorization regardless of Board confidence.
+- **Human-required boundaries:** go-live/production deploys (§10), spending real money, deleting data, and external communications require explicit human authorization (via Telegram, §11.5) regardless of Board confidence.
 - **Audit trail:** every decision and action is logged and attributable.
 - **Prompt-injection defense:** treat repo content, issue/PR text, and tool output as untrusted; the gateway/agents flag suspicious instructions rather than obeying them.
 
@@ -483,13 +573,13 @@ The spirit of your constraint ("one place for now, but not stuck there") is sati
 
 | Phase | Deliverable | Proves |
 |---|---|---|
-| **0. Foundations** | Repo, trunk protection, CI, Kanban automation, Model Gateway, telemetry, budget guard | Scripts-first backbone works |
-| **1. Single-stream autonomy** | Planner → DAG → one Builder → Reviewer → QA → merge, on one stream | The core loop ships code safely |
+| **0. Foundations** | Repo, trunk protection, CI, Kanban automation, **Hermes set up** (vendors + slots), state store + checkpoint/resume, quota-window guard, Telegram bridge, telemetry | Scripts-first backbone + durable state + multi-vendor routing work |
+| **1. Single-stream autonomy** | Planner → DAG → one Builder → Reviewer → QA → merge, on one stream; **per-phase test guide + `.venv` test environment**; human GUI-test loop over Telegram | The core loop ships code safely *and* a non-dev can test a phase |
 | **2. Parallelism** | Worktrees, leases, merge queue, multiple streams | Parallel work without collisions |
-| **3. The Board** | Multi-vendor approval on flagged decisions + ADRs | High-stakes decisions are cross-checked |
-| **4. Self-healing** | Heartbeats, watchdog, failover, recovery ladder | Survives disconnects/limits/stalls unattended |
+| **3. The Board** | 3-vendor approval on flagged decisions + ADRs | High-stakes decisions are cross-checked |
+| **4. Self-healing** | Heartbeats, watchdog, failover, recovery ladder, 5-hour-window handling | Survives disconnects/window resets/stalls unattended |
 | **5. Planning polish** | Concierge triage, question budget, alignment tooling, sign-off gate | Great non-developer experience |
-| **6. Hardening** | Cost tuning, security review, observability, runbooks | Production-grade, trustworthy |
+| **6. Hardening** | Cost/window tuning, security review, observability, runbooks, go-live gate | Production-grade, trustworthy |
 
 Each phase is independently demonstrable and adds one capability — so the system is useful early and de-risked incrementally.
 
@@ -501,41 +591,55 @@ Each phase is independently demonstrable and adds one capability — so the syst
 |---|---|
 | Agent commits to `main` | Mechanically impossible (branch protection + scoped token). |
 | Two builders edit same file | File leases + worktrees + merge-queue re-validation. |
-| Vendor outage / rate limit | Gateway failover to alternate vendor; backoff + requeue. |
-| Token budget blown | Budget Guard: tier downgrade, throttle, hard-cap pause + alert. |
+| Vendor outage / rate limit | Hermes failover to alternate vendor; backoff + requeue. |
+| 5-hour window exhausted | Quota Guard: pause that vendor's tier, continue on free/other models, auto-resume on reset (no alert). |
 | Endless fix loop | Circuit-breaker on repeated diffs → escalate/Block. |
-| Board deadlock | More-context round, then a single human question. |
+| Board deadlock | More-context round, then a single human question via Telegram. |
 | Over-questioning human | Question budget + "would a wrong answer change the plan?" test. |
 | Silent misalignment | Restate-and-confirm + assumption ledger + acceptance criteria at sign-off. |
+| GUI ships without human eyes | Per-phase human test guide + `.venv` test env + Telegram sign-off gate before phase accepted. |
+| Context overload across sessions | Externalized state, per-task context packs, Hermes compression/persistence, checkpoint & resume. |
 | Unreadable handover | Why-comments + ADRs + module docs enforced in CI. |
-| Cost creep | Scripts-first + tiered routing + per-vendor telemetry. |
+| Cost creep | Scripts-first + free-first routing + per-vendor window telemetry. |
 | Project goes stale | Nudge loop + stale-PR sweeper + heartbeat-driven recovery. |
-| Correlated model blind spot | Multi-vendor Board (different training lineages). |
+| Correlated model blind spot | 3-vendor Board (different training lineages). |
 
 ---
 
-## 20. Open questions / decisions I need from you
+## 20. Decisions — resolved & still open
 
-1. **"Hermes" meaning** (see §16) — model family or platform?
-2. **Budget caps** — per-project and/or monthly hard caps for the Budget Guard?
-3. **Human availability** — when the system *must* escalate, what's the contact channel and expected latency (so the Watchdog knows how long it may safely wait)?
-4. **Board size** — 3 or 4 seats? (3 is cheaper and breaks ties naturally; 4 adds diversity at higher cost.)
-5. **Deploy authority** — are production deploys always human-gated, or may the system deploy to staging autonomously and prod on schedule?
-6. **Preferred per-tier models** — your default picks for T1/T2/T3 from the vendors you hold keys for.
-7. **Question-budget size** — your comfort level for max questions during planning (e.g. 5 vs 8).
+**Resolved (baked into this spec):**
+
+| # | Decision | Where |
+|---|---|---|
+| Platform | Hermes (Nous `hermes-agent`) as substrate | §16 |
+| Cost model | No $ budget; manage 5-hour quota windows; free-first routing | §11.4 |
+| Human channel | Telegram | §11.5 |
+| Board size | 3 seats, 3 vendors | §7.2 |
+| Go-live | Always human-gated | §10, §17 |
+| GUI testing | Human-tested per phase, with test guide + `.venv` env | §14b |
+| Durability | Survive many sessions; externalized state + checkpoints | §15.2 |
+
+**Still open (small, can be set before/while building Phase 0):**
+
+1. **Per-tier model picks** — your default choices for T1 (free), T2, and T3, and the 3 Board vendors, from the keys you hold.
+2. **Question-budget size** — max questions during planning before forcing defaults (e.g. 5 vs 8)?
+3. **Escalation patience window** — how long may the Watchdog wait on a Telegram ask before pausing the affected stream (e.g. 1h, 8h, 24h)?
+4. **Project stacks** — which languages/stacks will projects use? (Drives the test-environment templates; `.venv` covers Python — we'll want equivalents for any JS/other stacks.)
+5. **Telegram setup** — bot token + chat/channel ID (operational, needed at Phase 0).
 
 ---
 
 ## 21. Illustrative cost intuition (not a quote)
 
-The economics work because of *mix*, not magic:
+You have no dollar budget — you have **subscription windows**. The economics work because of *mix*, not magic:
 
-- The vast majority of operations are **T0 scripts** = $0 in model cost.
-- High-volume reasoning (triage, summaries, simple edits, PR text) is **T1** = cheap/often free.
-- Real coding/review is **T2** = moderate.
-- Only **planning, hard problems, and Board votes** hit **T3** — rare, but where the money is well spent.
+- The vast majority of operations are **T0 scripts** = zero model usage.
+- High-volume reasoning (triage, summaries, simple edits, PR text) is **T1** routed to **free** models = no window consumed.
+- Real coding/review is **T2** — spends paid windows, but only when needed.
+- Only **planning, hard problems, and Board votes** hit **T3** — rare, and where a paid window is well spent.
 
-The Budget Guard + telemetry mean you see exactly where spend goes and can retune thresholds — quality is protected because escalation is always *available*; it's just not the *default*.
+The Quota & Rate Guard + telemetry mean you see exactly how much of each vendor's 5-hour window is left and can retune thresholds — **quality is protected because escalation is always *available*; it's just not the *default*, and free models soak up the volume so paid windows last.**
 
 ---
 

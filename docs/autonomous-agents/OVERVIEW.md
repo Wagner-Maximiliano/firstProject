@@ -47,22 +47,25 @@ There's always one clean, working copy of your project that's protected. Builder
 Just like sticky notes on a wall: **To Do → Doing → In Review → Done.** Every task is a card, and the cards move automatically. You (or anyone) can glance at it any time and see exactly where things stand.
 
 ### Big decisions go to a "board of experts" from different companies
-For the important, hard-to-undo choices, we don't trust a single AI. We ask **three or four different AIs from different companies** (one from Anthropic, one from OpenAI, one from another provider, etc.) to each weigh in *independently*, then challenge each other's reasoning. If they strongly agree, we proceed with confidence. If they're split, that's a signal we *aren't* sure — so we either dig deeper or ask you one clear question. Different companies' AIs have different blind spots, so a mixed panel catches mistakes a single one would miss.
+For the important, hard-to-undo choices, we don't trust a single AI. We ask **three different AIs from three different companies** (one from Anthropic, one from OpenAI, one from a third) to each weigh in *independently*, then challenge each other's reasoning. If they agree, we proceed with confidence. If they're split, that's a signal we *aren't* sure — so we either dig deeper or ask you one clear question. Different companies' AIs have different blind spots, so a mixed panel catches mistakes a single one would miss. (Three is the sweet spot: enough to cross-check, and an odd number so there's never a tied vote.)
 
 ### The work never goes stale
-A tireless "night watch" constantly checks the pulse of every part of the project. If a worker gets stuck, a connection drops, a service runs out of credit, or a task has been sitting too long — it steps in automatically: retry, switch to a different provider, restart the task, or call in a more capable expert. It only ever wakes *you* up as an absolute last resort, and when it does, it hands you the full story so you can decide quickly.
+A tireless "night watch" constantly checks the pulse of every part of the project. If a worker gets stuck, a connection drops, a service hits its usage limit, or a task has been sitting too long — it steps in automatically: retry, switch to a different provider, restart the task, or call in a more capable expert. It only ever pings *you* (on **Telegram**) as an absolute last resort, and when it does, it hands you the full story — usually as a simple tap-to-answer question — so you can decide in seconds.
+
+### It remembers everything, across days and many sessions
+The crew's memory doesn't live in any one conversation — it lives in the project's own files and a shared logbook. That means you can switch the whole thing off and turn it back on tomorrow and it picks up exactly where it left off, with nothing forgotten and nothing "overflowing." No single chat ever has to hold the entire project in its head, so it never gets overwhelmed no matter how big or long-running the project becomes.
 
 ---
 
-## How we keep it affordable (without making it worse)
+## How we keep it within your limits (without making it worse)
 
-Three simple ideas do the heavy lifting:
+You're on the **cheapest subscription for every AI service**, so the real limit isn't money — it's *how much you can use in a given window of time* (these services cap usage every few hours). The system is built around that:
 
-1. **Let plain software do the boring jobs.** Running tests, moving cards, tidying up, health checks — none of that needs an "AI brain," so we use ordinary scripts. They're instant and free.
-2. **Match the worker to the job.** Simple, repetitive thinking goes to cheap (or free) AIs. The expensive, brilliant ones are saved for planning, hard problems, and the Board. It's like not flying in a specialist surgeon to put on a plaster.
-3. **Only spend big when it matters.** The expensive multi-company Board only meets for genuinely big decisions — not everyday work.
+1. **Let plain software do the boring jobs.** Running tests, moving cards, tidying up, health checks — none of that needs an "AI brain," so we use ordinary scripts. Instant, and they use none of your allowance.
+2. **Lean on free AIs first.** The everyday, simple thinking is sent to **free models**, so your paid allowance is barely touched. It's like not flying in a specialist surgeon to put on a plaster.
+3. **Save the paid allowance for what matters.** The premium AIs are used only for planning, genuinely hard problems, and the Board — and the system watches each service's usage window so it never gets cut off mid-task. If one service is running low, it quietly shifts work to free models and picks the paid one back up once the window resets.
 
-**Important:** we never cut costs in a way that hurts the result. The expensive experts are always *available* the moment a task gets hard — we just don't use them by default. You'll also be able to see exactly where the money goes.
+**Important:** we never cut corners in a way that hurts the result. The premium experts are always *available* the moment a task gets hard — they're just not the default. And you can always see how much of each service's allowance is left.
 
 ---
 
@@ -75,6 +78,29 @@ Everything is written so another team — human or AI — could pick it up later
 - The tests double as a description of how things are *supposed* to behave.
 
 So the project never becomes a mysterious black box.
+
+---
+
+## Your other small job: trying out the screens
+
+A computer can test whether the *plumbing* works, but it can't yet look at a screen and tell you "this feels right" the way a person can. So whenever your project has something you can actually see and click, **you** give it a quick try — and the system makes that effortless:
+
+- At the end of each stage, you get a **dead-simple test sheet** written in plain English, with five parts:
+  1. **What we built** this stage.
+  2. **How to start it** — the exact thing to click or run.
+  3. **What to check** — a short checklist.
+  4. **What you should see** — so you know what "correct" looks like.
+  5. **If it looks wrong** — tap one button to tell us; we'll fix it and send you a fresh sheet.
+- It comes with a **ready-to-go little test version** of your project that just runs — no setup headaches, no risk to anything real.
+- You tap **pass** or **didn't work** for each item. A pass moves the stage to "done"; a fail sends the crew straight back to fix it.
+
+That's the whole job. A few minutes of tapping, no technical knowledge needed.
+
+---
+
+## What runs the whole thing
+
+Under the hood we use a tool called **Hermes** — think of it as the foreman's control panel. It can talk to every AI service you have (and the free ones), switch between them automatically if one is busy or down, remember things between sessions, and keep each worker pointed at the right AI for its job. Importantly, our own "rules of the company" sit *above* Hermes, so we're never locked in — if something better comes along later, we can swap the engine without rebuilding the company.
 
 ---
 
@@ -91,21 +117,27 @@ So the project never becomes a mysterious black box.
                                 Inspectors check everything
                                 Board approves the big calls
                                 Night watch keeps it all alive
-   (you relax)            →     Finished software, with you only
+5. Try the screens 👆      →     (only when there's something to see;
+   (tap pass / didn't work)      a simple test sheet guides you)
+6. Approve go-live ✅      →     Nothing reaches real users without
+                                your okay
+   (otherwise, you relax)  →     Finished software, with you only
                                 pulled in if something truly needs you
 ```
 
 ---
 
-## A few things I need from you to finalize
+## What's settled, and the last few things I need
 
-Quick decisions that will make the plan exact (these are also listed in the technical doc):
+**Settled from our chat:** Hermes is the engine • no money budget, we live within your usage windows and lean on free AIs • Telegram is how it reaches you • a 3-company board • nothing goes live without your okay • you test the screens each stage with a simple sheet • it survives across as many sessions as you like.
 
-1. **"Hermes"** — did you mean a specific AI *model* (I can use it), or a *platform* by that name? I've built the design so either answer fits.
-2. **Spending limits** — a monthly or per-project cap you'd like the system to respect?
-3. **How to reach you** — for the rare "we really need a human" moment, where should it ping you, and how long can it wait?
-4. **Board size** — 3 experts (cheaper, breaks ties naturally) or 4 (more diverse, costs a bit more)?
-5. **Going live** — should putting your project in front of real users always need your okay, or can the system handle a "practice" version on its own?
+**Last few small things, whenever you're ready:**
+
+1. **Favourite AIs for each job** — which AI you'd like as the cheap/free everyday worker, which for real coding, and which three companies sit on the board.
+2. **How many questions** is too many during planning — 5? 8?
+3. **How long the "night watch" should wait** for you to answer a Telegram message before it parks that piece of work and carries on with the rest (an hour? a day?).
+4. **What your projects are built in** — mostly Python, or also web/JavaScript or others? (Just so the little test versions are set up the right way.)
+5. **Telegram details** — the bot/channel to use (we'll wire this up first).
 
 Answer those whenever you're ready and I'll lock the plan down.
 
