@@ -210,3 +210,38 @@ Phase 2 parallel streams (git worktrees + file leases) · real merge queue · ri
 ## 8. Open inputs from the human (non-blocking — sensible defaults exist)
 
 Provider keys (Anthropic/OpenAI/3rd) + Telegram bot token (via env secrets, not chat) · default models per tier + 3 board vendors · the pilot toy idea (or let the first planning run choose one) · escalation patience window. All have defaults in `config/settings.yaml`; the build proceeds on mocks until keys arrive.
+
+---
+
+## Packaging as a Hermes tap (ADR-0002)
+
+ADR-0002 sets the packaging architecture: this repo becomes a Hermes tap with skills, bundles, and dedicated profiles. The human installs once per machine; projects are never entangled with the framework code.
+
+### Done
+
+The packaging scaffold is in place:
+
+- **8 skills** (`skills/ama-{planning,build-task,review,board,github-workflow,session-handoff,human-testing,quota-guard}/`), each with a `SKILL.md` (progressive disclosure + body).
+- **5 bundles** (`skill-bundles/ama-{plan,build,review,board}.yaml` + `ama.yaml`), each with a name, instruction string, and skill list.
+- **6 dedicated AMA profiles** (`profiles/ama-{planner,builder,reviewer,board-a,board-b,board-c}/SOUL.md`), defining role identity (never to be overwritten by `hermes update`).
+- **Config** (`config/settings.yaml`) — tier→model mapping (T1/T2/T3 + board seats A/B/C across 3 vendors).
+- **Setup script** (`scripts/setup-ama-profiles.sh`) — creates profiles, installs skills/bundles, sets model tiers.
+- **Project brief template** (`templates/PROJECT_BRIEF.md`) — one-time input for each new project.
+
+### Remaining packaging tasks
+
+**PKG-1: Verify scripts/setup-ama-profiles.sh against real Hermes**
+- *Goal:* Resolve every `# VERIFY:` comment in the setup script to match actual Hermes CLI behavior.
+- *Done when:* all VERIFY markers are addressed (profile creation, model config, bundle/SOUL copy, skills install, tap add) and documented as working or adjusted.
+
+**PKG-2: End-to-end install test**
+- *Goal:* Confirm the full install chain works: tap add → setup script → profiles/bundles/skills usable.
+- *Done when:* (1) `hermes skills tap add <owner>/<repo>` succeeds, (2) `bash scripts/setup-ama-profiles.sh` completes without error, (3) all six profiles exist in `~/.hermes/profiles/`, (4) each has the correct model tier set, (5) `/ama-plan`, `/ama-build`, `/ama-review`, `/ama-board` commands are available in their respective profiles.
+
+**PKG-3: Dry-run framework-vs-project flow**
+- *Goal:* Verify the intended split (framework in `~/.hermes/`, project brief + code in the project repo) works end-to-end.
+- *Done when:* a tiny throwaway project repo is created with a filled `PROJECT_BRIEF.md`, the Planner is invoked with `hermes -p ama-planner /ama-plan`, the brief is read first, and the project tree stays clean (no framework clutter).
+
+### Core engine (B0–B2) scope
+
+The core/ engine phases (B0–B2 in §5) still stand per ADR-0002: the human chose "skills + custom core" over skills-only, so B0-4 through B1-9 build the custom orchestration engine (gateway, state store, board, watchdog, quality checks, Telegram). Additionally, B0-1 now reconciles core/ scope against Hermes-native features (routing, sessions, compression) to avoid rebuilding what Hermes gives us.
