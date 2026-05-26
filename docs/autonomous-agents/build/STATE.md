@@ -8,7 +8,7 @@
 
 - **Phase:** B0 — Foundations & spec reconciliation
 - **Active task:** _none yet — not started_
-- **Build branch:** `build/v1-pilot` _(create from `master` in session 1 if it doesn't exist)_
+- **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(already holds this handover package + starter prompts; build here and keep `master` untouched)_
 - **Build health:** _no code yet_
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
@@ -19,8 +19,8 @@
 **Task B0-1 — Verify Hermes & reconcile the design.**
 First session also needs to do the protocol's START checklist and create the build branch.
 Concretely:
-1. Create/checkout `build/v1-pilot` from `master`.
-2. Read `BUILD_PLAN.md` §2–§5 and `FRAMEWORK_SPEC.md` §16.
+1. Confirm you're on `claude/autonomous-agent-framework-5MdEG` (it holds this package + the starter prompts in `/prompts/`). Do NOT branch from `master`.
+2. Read `BUILD_PLAN.md` §2–§5 and `FRAMEWORK_SPEC.md` §16, and skim the starter job descriptions in `/prompts/`.
 3. Research the real `hermes-agent` API (its repo/docs) and write `docs/adr/ADR-0001-hermes-integration.md` capturing what's actually true vs. what the spec assumed.
 4. If quick, scaffold B0-2 (project skeleton) as well.
 

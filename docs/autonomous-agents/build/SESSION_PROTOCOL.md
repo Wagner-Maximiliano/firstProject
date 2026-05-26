@@ -53,7 +53,7 @@ Wrap up **proactively** — do not run yourself to the edge of the context windo
 
 ## 4. Branch & merge rules
 
-- Work on the **build branch**. Use the branch named in your session's own instructions if one is given; otherwise use **`build/v1-pilot`** (create it from `master` if it doesn't exist). Push there.
+- Work on the **build branch** — the branch that already contains this handover package (currently **`claude/autonomous-agent-framework-5MdEG`**). All the design + build docs and starter prompts live there; do **not** branch from `master` (it doesn't have them). If your session was handed a different branch mandate, first confirm this package is present on that branch and merge it in if not.
 - **Never commit directly to `master`/`main`.** Once B0-3 sets up trunk protection, this is also enforced by GitHub.
 - At milestone boundaries (end of a phase), you may open a PR from the build branch into `master` for the human to merge — mention it in your summary. Do **not** auto-merge to `master`.
 

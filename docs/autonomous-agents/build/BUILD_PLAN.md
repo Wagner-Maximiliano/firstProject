@@ -68,7 +68,7 @@ tests/                     # pytest suite for Helm itself
 docs/autonomous-agents/    # design + this build package (already here)
 ```
 
-Build sessions create this incrementally; it does not all appear at once.
+Build sessions create this incrementally; it does not all appear at once. **Note:** `prompts/` is already seeded with starter agent job descriptions (Concierge, Planner, Builder, Inverted Reviewer, Reviewer, Board Member) — refine these rather than writing them from scratch when you reach the relevant tasks.
 
 ---
 
