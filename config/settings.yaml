@@ -1,0 +1,41 @@
+# AMA Framework Configuration
+# Model tier mapping and multi-vendor board assignment.
+#
+# API KEYS: Never commit keys to this file. Set these in your environment:
+#   - ANTHROPIC_API_KEY
+#   - OPENAI_API_KEY
+#   - OPENROUTER_API_KEY
+#
+# Profile assignments (by tier):
+#   ama-planner      → T3 (high-reasoning, frontier)
+#   ama-builder      → T2 (mid-range, real coding)
+#   ama-reviewer     → T2 (mid-range, different model than builder)
+#   ama-board-a      → seat_a (Anthropic)
+#   ama-board-b      → seat_b (OpenAI)
+#   ama-board-c      → seat_c (OpenRouter)
+
+tiers:
+  T1:
+    # Cheap, high-volume: triage, summaries, adversarial review
+    provider: openrouter
+    model: nvidia/nemotron-mini
+  T2:
+    # Mid-range: real coding, code review
+    provider: anthropic
+    model: claude-sonnet-4-20250514
+  T3:
+    # Frontier: planning, hard problems
+    provider: anthropic
+    model: claude-opus-4-1
+
+board:
+  # Three-vendor approval board; each seat evaluates from its lens
+  seat_a:
+    provider: anthropic
+    model: claude-opus-4-1
+  seat_b:
+    provider: openai
+    model: gpt-4o
+  seat_c:
+    provider: openrouter
+    model: anthropic/claude-opus

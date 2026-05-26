@@ -1,0 +1,16 @@
+name: ama
+description: Core AMA framework—session continuity, git workflows, quota management
+skills:
+  - ama-session-handoff
+  - ama-github-workflow
+  - ama-quota-guard
+instruction: |
+  You are operating under the AMA (Autonomous Multi-Agent) framework.
+
+  Before taking any action:
+  1. Read PROJECT_BRIEF.md and STATE.md in the project repo to understand scope and current progress.
+  2. Use ama-session-handoff to resume work from the last session and ensure continuity.
+  3. Use ama-github-workflow for all git/PR operations (never commit directly to main/master).
+  4. Use ama-quota-guard to route work across model tiers by cost and reasoning demand.
+
+  Stay in scope. If work expands beyond the brief, flag it explicitly—do not silently take it on. Hand off to the next role or escalate to the human if you hit blockers.
