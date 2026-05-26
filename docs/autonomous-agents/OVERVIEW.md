@@ -28,9 +28,9 @@ You only ever talk to the Greeter and the Architect, and only at the planning st
 Everything depends on a great plan, so that's where your time goes — and we make it painless:
 
 - **A friendly, cheap assistant talks to you first.** It handles the simple stuff itself and only pulls in the senior "architect" brain for the questions that really shape your project. (This also keeps costs down — we don't put an expensive expert on small talk.)
-- **We never overload you with questions.** There's a strict limit. Every question has to earn its place by passing one test: *"If you answered this wrong, would the project actually come out different?"* If not, we make a sensible choice and just tell you what we assumed.
-- **You answer by choosing, not by writing tech-speak.** Questions come as simple options with a recommended pick, so you never need to know any jargon.
-- **We make sure we understood you — not just your words.** Before building, the Architect plays your idea back to you in plain language, sometimes with a quick mockup or example, so we catch any "that's not quite what I meant" *before* a single thing is built.
+- **You steer how deep we go — topic by topic.** Instead of a fixed list of questions, we walk through a handful of plain-English topics (what it does, how it looks, your data & privacy, cost trade-offs, speed). For each, we ask two or three quick questions, then give you a choice: **"dive deeper"** if you care about that topic, or **"trust the AI here"** if you don't. You spend your attention only where it matters to you — never an interrogation, but never rushed past something important either.
+- **We talk in business terms, not tech-speak.** We'll ask "faster search, or cheaper storage?" — not "what database indexing strategy?" So you never need to know any jargon to make a good call.
+- **We show you options instead of quizzing you.** Where it helps, we put two quick sketches of a screen side by side and just ask "which feels closer to what you pictured?" You'll recognise what you want far faster than you could describe it — and it catches "that's not quite what I meant" *before* anything is built.
 - **You give one final thumbs-up.** That sign-off is the moment autonomy begins. After that, the crew runs on its own.
 
 ---
@@ -47,7 +47,12 @@ There's always one clean, working copy of your project that's protected. Builder
 Just like sticky notes on a wall: **To Do → Doing → In Review → Done.** Every task is a card, and the cards move automatically. You (or anyone) can glance at it any time and see exactly where things stand.
 
 ### Big decisions go to a "board of experts" from different companies
-For the important, hard-to-undo choices, we don't trust a single AI. We ask **three different AIs from three different companies** (one from Anthropic, one from OpenAI, one from a third) to each weigh in *independently*, then challenge each other's reasoning. If they agree, we proceed with confidence. If they're split, that's a signal we *aren't* sure — so we either dig deeper or ask you one clear question. Different companies' AIs have different blind spots, so a mixed panel catches mistakes a single one would miss. (Three is the sweet spot: enough to cross-check, and an odd number so there's never a tied vote.)
+For the important, hard-to-undo choices, we don't trust a single AI. We ask **three AIs from three different companies** (e.g. Anthropic, OpenAI, and a third) to weigh in — different companies' AIs have different blind spots, so a mixed panel catches mistakes a single one would miss.
+
+But here's the important refinement (thanks to the review): they don't just "vote" on whether they *like* it — that would have them bickering over style forever (one AI loves clever, compact code; another loves cautious, spelled-out code). Instead, each **scores the decision out of 10 on the things that actually matter — cost, security, and maintainability** — and it passes or fails on the numbers, not on opinions. And if an AI wants to reject something, it has to **prove it**: produce a working, better alternative. "I just don't like it," with no fix attached, gets thrown out. That turns the board from a debating club into a real, evidence-based checkpoint — and the only time it bothers you is the rare case where one AI has a genuinely better, working alternative the others dispute.
+
+### We never take an AI's word that its work is good
+An AI asked "did you do that correctly?" will almost always say "yes" — even when it didn't (a bit like asking an over-tired toddler if it needs a nap). So we never rely on an AI's opinion of its own work. Two things decide instead: the **automated tests** (does it actually run and pass?), and a **second, cheaper AI whose only job is to poke holes** in the first one's work. Spotting mistakes is far easier than writing the code in the first place, so even a cheap AI is great at it — and if the tests fail or the critic finds real problems, we automatically bring in a more powerful (pricier) AI to sort it out. That way the expensive experts show up exactly when they're genuinely needed, not on a hunch.
 
 ### The work never goes stale
 A tireless "night watch" constantly checks the pulse of every part of the project. If a worker gets stuck, a connection drops, a service hits its usage limit, or a task has been sitting too long — it steps in automatically: retry, switch to a different provider, restart the task, or call in a more capable expert. It only ever pings *you* (on **Telegram**) as an absolute last resort, and when it does, it hands you the full story — usually as a simple tap-to-answer question — so you can decide in seconds.
@@ -129,12 +134,12 @@ Under the hood we use a tool called **Hermes** — think of it as the foreman's 
 
 ## What's settled, and the last few things I need
 
-**Settled from our chat:** Hermes is the engine • no money budget, we live within your usage windows and lean on free AIs • Telegram is how it reaches you • a 3-company board • nothing goes live without your okay • you test the screens each stage with a simple sheet • it survives across as many sessions as you like.
+**Settled from our chat:** Hermes is the engine • no money budget, we live within your usage windows and lean on free AIs • Telegram is how it reaches you • a 3-company board that *scores objectively and must prove its objections* • we judge work by results and a critic AI, not by an AI's opinion of itself • planning is topic-by-topic with dive-deeper/trust controls • nothing goes live without your okay • you test the screens each stage with a simple sheet • it survives across as many sessions as you like.
 
 **Last few small things, whenever you're ready:**
 
 1. **Favourite AIs for each job** — which AI you'd like as the cheap/free everyday worker, which for real coding, and which three companies sit on the board.
-2. **How many questions** is too many during planning — 5? 8?
+2. **The planning topics and the board's scorecard** (cost / security / maintainability) — I've set sensible defaults; just say if you'd change them. (Fine to leave as-is.)
 3. **How long the "night watch" should wait** for you to answer a Telegram message before it parks that piece of work and carries on with the rest (an hour? a day?).
 4. **What your projects are built in** — mostly Python, or also web/JavaScript or others? (Just so the little test versions are set up the right way.)
 5. **Telegram details** — the bot/channel to use (we'll wire this up first).

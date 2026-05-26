@@ -1,6 +1,6 @@
 # Autonomous Agent Delivery Framework — Detailed Technical Specification
 
-> **Status:** Draft v0.1 — for review
+> **Status:** Draft v0.2 — for review. v0.2 incorporates an external NotebookLM critique (objective board rubric + actionable vetoes; empirical/adversarial escalation instead of self-reported confidence; progressive-disclosure planning).
 > **Audience:** Technical. This is the exhaustive version. A plain-language companion lives in `OVERVIEW.md`.
 > **Goal:** A reusable system ("the machine that builds projects") in which a team of AI agents takes a software project from idea to shipped product with the human involved *only* during planning and sign-off.
 
@@ -86,7 +86,7 @@ Each role is a *configuration*, not a fixed model. The "Default tier" is the sta
 
 | Role | Default tier | Responsibilities | May escalate to | Talks to human? |
 |---|---|---|---|---|
-| **Concierge** | T1 (cheap, e.g. Haiku/OSS) | First contact in planning. Interprets request, scores complexity, answers simple things directly, escalates complex ones. Manages the *question budget*. | T3 Planner | **Yes** (planning only) |
+| **Concierge** | T1 (cheap, e.g. Haiku/OSS) | First contact in planning. Interprets request, scores complexity, answers simple things directly, escalates complex ones. Drives *progressive disclosure* (§13.2). | T3 Planner | **Yes** (planning only) |
 | **Architect / Planner** | T3 (frontier) | Turns the conversation into a sound plan: PRD, tech spec, task DAG, acceptance criteria, ADRs. Decides architecture. | Board for big calls | Indirectly, via Concierge |
 | **Orchestrator / PM** | Scripts + T1 | Runs the build loop. Builds/maintains task DAG, schedules streams, assigns issues, manages Kanban + merge queue, enforces WIP limits. Almost no reasoning — mostly deterministic. | T2 for ambiguous scheduling | No |
 | **Builder** | T1–T2 | Implements a single task on a feature branch: code + tests + docs. Simple tasks T1, real coding T2. | T3 for hard problems | No |
@@ -129,14 +129,23 @@ route(task):
 
 ### 5.3 Escalation ladder (within a running task)
 
-An agent does **not** silently struggle. It escalates on explicit triggers:
+An agent does **not** silently struggle — and crucially, **escalation is never triggered by a model's self-reported confidence.** Models are poor at gauging their own correctness zero-shot (the "ask a toddler if it's tired" problem — they confidently emit broken code), so self-assessment would silently bypass the safety net. Triggers are *empirical and external*:
 
-1. **Self-confidence below threshold** (agent reports `confidence < 0.7` on its own output) → escalate one tier.
-2. **N failed attempts** (default N=2: e.g. tests still red after 2 fix cycles) → escalate one tier.
+1. **Empirical failure (primary).** T0 QA — compile/build/tests/lint/type-check — fails **N times in a row** (default N=3). The environment, not the model's opinion, declares confidence functionally zero → escalate one tier. It doesn't matter if the model claims 99% confidence; the test suite says otherwise.
+2. **Adversarial reviewer flags it.** A cheap **inverted reviewer** (§5.4) scores the builder's output against the acceptance criteria and finds ≥K critical deviations (default K=3) → escalate. This breaks the self-assessment echo chamber by judging output externally.
 3. **Touches a board-criteria area** (see §7) → go to Board, skip tiers.
 4. **Quota Guard says "downgrade"** (paid window nearly spent) → forced de-escalation to a free model (with a flag that quality risk was accepted) or defer until the window resets.
 
-Escalation always carries the full context bundle (task, attempts, errors) so the higher tier doesn't restart from zero.
+Escalation always carries the full context bundle (task, attempts, errors, reviewer findings) so the higher tier doesn't restart from zero.
+
+### 5.4 The inverted reviewer (cheap adversarial critic)
+
+A deliberately *cheaper* T1 model is pointed at the (more capable) T2 builder's output with one job: **hunt for flaws** against the acceptance criteria. This works because of the **generation-vs-verification asymmetry** — writing correct code needs heavy reasoning, but spotting a missing edge case or broken contract needs far less, so a small, fast, often-free model is an effective critic.
+
+- Input: the builder's diff + the strict acceptance criteria. Prompt: find deviations, don't be agreeable.
+- Output: a **skepticism score** + a list of concrete deviations.
+- The score is an *escalation trigger* (§5.3), not a merge gate — the T2 Reviewer and T0 CI remain the gates. It is cheap insurance that catches the "confidently wrong" case the builder won't catch itself.
+- Defense in depth: empirical (T0) **and** adversarial (T1) triggers run together, so a blind spot in one is caught by the other.
 
 ---
 
@@ -160,11 +169,11 @@ Thresholds (`LOW`, `MID`) are configurable and tuned over time from outcome data
 
 ### 6.2 Confidence and the "98%" idea
 
-You asked for high confidence before acting. We operationalize this:
+You asked for high confidence before acting. We operationalize it **empirically** — never by trusting a model's own claim of confidence (§5.3):
 
-- **Planning confidence:** the Planner keeps asking (within the question budget) until its self-assessed understanding clears a configurable bar (your "98%"). It states the bar and its current estimate to the human at the sign-off gate.
-- **Decision confidence:** for Board decisions, confidence = agreement among independent vendors (see §7.4). A split board *is* low confidence and forces either more analysis or human input.
-- **Build confidence:** a task is "done" only when QA evidence (green tests, passing build, optional runtime check) backs it — confidence is *demonstrated*, not *claimed*.
+- **Planning confidence:** the Planner surfaces questions via progressive disclosure (§13.2) until the design is grounded, then the human confirms at the sign-off gate — so "98%" is *verified by a human*, not self-graded by the model.
+- **Decision confidence:** for Board decisions, confidence = rubric scores clearing objective thresholds (§7.4), not subjective agreement. Genuine, evidence-backed divergence (a low score defended by a working alternative patch) is the rare real signal that warrants human input.
+- **Build confidence:** a task is "done" only when external evidence backs it — green T0 tests/build, a clean inverted-reviewer pass (§5.4), and (for GUIs) human verification (§14b). Confidence is *demonstrated*, never *claimed*.
 
 ---
 
@@ -198,28 +207,49 @@ Vendor diversity is the point: correlated blind spots within one vendor are redu
 
 ```
 1. PROPOSE   — proposing agent writes a decision brief (problem, options,
-               recommendation, rationale, risks) → an ADR draft.
-2. INDEPENDENT REVIEW — each board member reviews the brief *blind* to the
-               others' verdicts. Output: {verdict, confidence, objections}.
-3. CROSS-CHECK — members now see each other's objections and respond
-               (defend / concede / revise). This is the "A checks B and B
-               checks A" loop, generalized to N members.
-4. RECONCILE — a neutral tally (T0 script) computes the outcome (§7.4).
-5. RECORD    — the finalized ADR (with dissents) is committed to /docs/adr.
+               recommendation, rationale, risks), pre-mapped to the rubric
+               axes (§7.4) → an ADR draft.
+2. SCORE     — each member independently and *blind* scores the proposal on
+   (blind)     the fixed rubric (cost / security / maintainability, 1–10)
+               with a one-line justification per axis. Members argue on
+               *identical axes*, not personal style — this stops drift.
+3. ACTIONABLE VETO ("prove it or lose it") — any sub-threshold ("no") score
+               MUST ship with a concrete, compiling code-level alternative or
+               pseudo-code patch proving the objection is fixable. A veto with
+               no actionable alternative is discarded as noise.
+4. CROSS-CHECK — members see each other's scores + patches and may revise
+               (defend / concede / revise). "A checks B, B checks A", over 3.
+5. RECONCILE — a T0 script applies the math thresholds (§7.4); the outcome is
+               computed, not debated.
+6. RECORD    — the finalized ADR (scores, surviving objections, any adopted
+               patch) is committed to /docs/adr.
 ```
 
-### 7.4 Voting & tie-breaks
+### 7.4 Scoring rubric & thresholds (objective, not subjective)
 
-With three seats:
+**Why not raw voting:** different model lineages have different coding philosophies baked in by their training (one favours terse DRY abstraction, another verbose explicitness). Asking them merely to "agree" makes a *split the default state* — they deadlock on style, not substance, and keep waking the human, breaking rule #6. So the board does **not** vote on agreement; it **scores against a shared rubric**, and approval is a **math function of the scores.**
+
+**The rubric (tri-factor, configurable, 1–10 each):**
+
+| Axis | What each member scores |
+|---|---|
+| **Cost** | Build/run/maintenance cost and quota-window impact of this choice. |
+| **Security** | Risk to data, secrets, auth, users. |
+| **Maintainability** | Readability, handover, blast radius, reversibility. |
+
+(A project may add one axis, e.g. *performance*, but the set is fixed *before* scoring so nobody invents bespoke criteria mid-debate.)
+
+**Thresholds (example, tuned from outcomes over time):**
 
 | Outcome | Rule |
 |---|---|
-| **Approved** | **Unanimous (3/3)** for irreversible/security/data decisions; **2-of-3** for other big decisions. |
-| **Approved w/ conditions** | Majority approve but raise must-fix objections → conditions attached to the task. |
-| **Split / low-confidence** | A 2-1 split on an irreversible/high-risk call counts as *not confident* → escalate: (a) one more analysis round with more context, then (b) if still split, the **human** is asked a single, well-framed question (via Telegram, §11.5). |
-| **Rejected** | Majority against → proposal returns to Planner/Builder with the consolidated objections. |
+| **Approved** | Mean of each axis ≥ 7 **and** no mandatory floor breached. |
+| **Mandatory floor** | For security/data/irreversible changes, **every** member's Security score must be ≥ 8; any sub-floor score blocks regardless of the mean. |
+| **Approved w/ conditions** | Passes thresholds but carries surviving (patch-backed) objections → those become must-fix conditions on the task. |
+| **Evidence-backed divergence** | Scores straddle a threshold *and* a sub-threshold vote is backed by a working alternative patch → the real signal: escalate to the **human** (Telegram, §11.5) with the competing patches attached. Rare by design. |
+| **Rejected** | Below threshold → returns to Planner/Builder with the consolidated scores + the best alternative patch. |
 
-A split board is a *feature*: it is the system honestly reporting "we are not confident," which is exactly when a human (or more thought) is warranted.
+Because the outcome is computed from scores, a *stylistic* disagreement (a member dislikes an abstraction but can't produce a better compiling patch) no longer halts anything — its veto is discarded (§7.3 step 3). Only **substantive, demonstrable** disagreement reaches the human. The board is an evidence-based checkpoint, not a debate club.
 
 ### 7.5 Cost control for the Board
 
@@ -429,19 +459,24 @@ Human idea
   → autonomy begins
 ```
 
-### 13.2 The question budget (don't overload the human)
+### 13.2 Progressive disclosure, not a hard cap
 
-- A **hard cap** on number of questions per session (configurable, e.g. 5–8), plus a complexity-gated escape hatch.
-- Concierge (cheap) handles trivial clarifications; only design-critical questions reach the human.
-- Questions are **batched** and offered as **multiple-choice with a recommended default** wherever possible, so a non-developer can answer by picking, not by typing technical prose.
-- Each question must pass a test: *"Would a wrong answer here materially change the plan?"* If not, the system picks a sensible default and notes the assumption for sign-off.
+A rigid numerical cap (the old "5–8 questions") is the wrong tool: complex software involves *discovering unstated needs*, and capping questions forces the AI to silently invent defaults for everything unasked — producing a large assumption ledger a non-technical human will rubber-stamp, authorizing downstream technical debt they never understood. (The "architect pours the concrete after you picked only the door colour" problem.)
+
+Instead, planning uses **progressive disclosure organised by business-impact domain:**
+
+- **Cluster by domain, framed in business terms — never jargon.** e.g. *what it does* (core logic), *look & feel* (UI), *your data & privacy*, *cost trade-offs*, *speed & scale*. Ask "search speed vs storage cost", not "database indexing strategy."
+- **2–3 high-leverage questions per domain**, then two buttons: **"dive deeper"** or **"trust the AI's default"** — the human controls the pacing and spends attention only where they care (deep on privacy, default on colours).
+- **Complexity-scaled (§6.1):** simple projects surface few domains and stay short; complex ones expand *only* in the domains that matter — no artificial floor or ceiling.
+- **The relevance test still gates everything:** *"Would a wrong answer here materially change the plan?"* If not, default silently.
+- **Smaller, safer assumption ledger:** whatever is defaulted is still logged, but it's far smaller, grouped by domain, and presented riskiest-first at the sign-off gate.
 
 ### 13.3 "What they asked" vs "what they actually want"
 
 To close the alignment gap:
 
 - **Restate-and-confirm:** the Planner restates the goal in plain language + concrete examples before building the plan.
-- **Show, don't tell:** where useful, generate a mockup, sample output, or user-story walkthrough for the human to react to.
+- **Show, don't tell — let visuals replace questions.** Present **two wireframes/mockups** and ask "which feels closer to your vision?" Humans read visuals far faster than prose, and an A/B choice surfaces implicit preferences *without* spending an explicit question or feeling like an interrogation.
 - **Acceptance criteria as contract:** the human signs off on *observable outcomes*, not jargon.
 - **Assumption ledger:** every default/assumption is listed at the gate so silent misalignment surfaces early.
 
@@ -578,7 +613,7 @@ Dashboards for stream status, quota-window headroom per vendor, board decisions,
 | **2. Parallelism** | Worktrees, leases, merge queue, multiple streams | Parallel work without collisions |
 | **3. The Board** | 3-vendor approval on flagged decisions + ADRs | High-stakes decisions are cross-checked |
 | **4. Self-healing** | Heartbeats, watchdog, failover, recovery ladder, 5-hour-window handling | Survives disconnects/window resets/stalls unattended |
-| **5. Planning polish** | Concierge triage, question budget, alignment tooling, sign-off gate | Great non-developer experience |
+| **5. Planning polish** | Concierge triage, progressive disclosure by domain, visual A/B, alignment tooling, sign-off gate | Great non-developer experience |
 | **6. Hardening** | Cost/window tuning, security review, observability, runbooks, go-live gate | Production-grade, trustworthy |
 
 Each phase is independently demonstrable and adds one capability — so the system is useful early and de-risked incrementally.
@@ -594,9 +629,10 @@ Each phase is independently demonstrable and adds one capability — so the syst
 | Vendor outage / rate limit | Hermes failover to alternate vendor; backoff + requeue. |
 | 5-hour window exhausted | Quota Guard: pause that vendor's tier, continue on free/other models, auto-resume on reset (no alert). |
 | Endless fix loop | Circuit-breaker on repeated diffs → escalate/Block. |
-| Board deadlock | More-context round, then a single human question via Telegram. |
-| Over-questioning human | Question budget + "would a wrong answer change the plan?" test. |
-| Silent misalignment | Restate-and-confirm + assumption ledger + acceptance criteria at sign-off. |
+| Board stylistic deadlock | Objective rubric scoring (§7.4) + "prove it or lose it" vetoes; only patch-backed divergence reaches a human. |
+| Model confidently ships broken code | Escalation is empirical (T0 test failures) + adversarial (inverted reviewer, §5.4) — never self-reported confidence. |
+| Over- or under-questioning human | Progressive disclosure by business domain + dive-deeper/trust buttons + visual A/B (§13.2–13.3); relevance test. |
+| Silent misalignment | Restate-and-confirm + visual A/B + smaller domain-grouped assumption ledger + acceptance criteria at sign-off. |
 | GUI ships without human eyes | Per-phase human test guide + `.venv` test env + Telegram sign-off gate before phase accepted. |
 | Context overload across sessions | Externalized state, per-task context packs, Hermes compression/persistence, checkpoint & resume. |
 | Unreadable handover | Why-comments + ADRs + module docs enforced in CI. |
@@ -623,7 +659,7 @@ Each phase is independently demonstrable and adds one capability — so the syst
 **Still open (small, can be set before/while building Phase 0):**
 
 1. **Per-tier model picks** — your default choices for T1 (free), T2, and T3, and the 3 Board vendors, from the keys you hold.
-2. **Question-budget size** — max questions during planning before forcing defaults (e.g. 5 vs 8)?
+2. **Planning domains & rubric** — happy with the default business-impact domains (§13.2) and the board's tri-factor rubric/thresholds (§7.4), or want to tweak the axes/floors? (Sensible defaults already set; this is fine to leave.)
 3. **Escalation patience window** — how long may the Watchdog wait on a Telegram ask before pausing the affected stream (e.g. 1h, 8h, 24h)?
 4. **Project stacks** — which languages/stacks will projects use? (Drives the test-environment templates; `.venv` covers Python — we'll want equivalents for any JS/other stacks.)
 5. **Telegram setup** — bot token + chat/channel ID (operational, needed at Phase 0).
