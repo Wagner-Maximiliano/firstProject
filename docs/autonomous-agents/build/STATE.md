@@ -6,27 +6,39 @@
 
 ## CURRENT STATUS
 
-- **Phase:** B0 — Foundations & spec reconciliation
-- **Active task:** _none yet — not started_
-- **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(already holds this handover package + starter prompts; build here and keep `master` untouched)_
-- **Build health:** _no code yet_
+- **Phase:** Packaging scaffold complete (ADR-0002) → next is B0-1 reconciliation + PKG verification
+- **Active task:** _none in progress — packaging scaffold just shipped_
+- **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, AND the new tap: `skills/`, `profiles/`, `skill-bundles/`, `config/`, `scripts/`, `templates/`; build here, keep `master` untouched)_
+- **Build health:** _no `core/` code or tests yet; the tap (skills/bundles/profiles) is authored but NOT yet tested against a real Hermes install_
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
 ---
 
 ## ▶ NEXT SESSION STARTS HERE
 
-**Task B0-1 — Verify Hermes & reconcile the design** (now also: lock `core/` scope against Hermes-native features).
-First read `docs/adr/ADR-0002` — it sets the packaging architecture everything else follows.
+**Task B0-1 — Verify Hermes & reconcile `core/` scope** (unblocked; no running Hermes needed).
+The packaging scaffold (tap: `skills/`, `skill-bundles/`, `profiles/`, `config/`, setup script, brief template) is already built and committed — see `docs/adr/ADR-0002`, the README, and BUILD_PLAN's "Packaging as a Hermes tap" section. **Do NOT rebuild it.**
 Concretely:
-1. Confirm you're on `claude/autonomous-agent-framework-5MdEG` (it holds this package + the starter prompts in `/prompts/`). Do NOT branch from `master`.
-2. Read `BUILD_PLAN.md` §2–§5, `FRAMEWORK_SPEC.md` §16, and `docs/adr/ADR-0002`; skim the starter job descriptions in `/prompts/`.
-3. Write `docs/adr/ADR-0001-hermes-integration.md`: the real `hermes-agent` capabilities (skills/bundles/taps/profiles, provider/tier config, session persistence, compression, retries) vs. what the spec assumed — and decide, per `core/` module, **build-custom vs. defer-to-Hermes** (prefer Hermes for routing/sessions/compression; custom for the quota guard, board orchestration, GUI-test flow).
-4. Then begin the packaging scaffold (per ADR-0002 follow-ups): create `skills/` with the 8 SKILL.md, `skill-bundles/ama-*.yaml`, and the profile-setup script; refactor `prompts/` content into skill bodies (the *how*) and new-profile `SOUL.md` drafts (the *who*). These will become explicit BUILD_PLAN tasks (a new packaging phase) — add them when you touch BUILD_PLAN.
+1. Confirm you're on `claude/autonomous-agent-framework-5MdEG`. Do NOT branch from `master`.
+2. Read `BUILD_PLAN.md` §2–§5 + the "Packaging as a Hermes tap" section, `FRAMEWORK_SPEC.md` §16, and `docs/adr/ADR-0002`.
+3. Write `docs/adr/ADR-0001-hermes-integration.md`: real `hermes-agent` capabilities vs. spec assumptions, and decide per `core/` module **build-custom vs. defer-to-Hermes** (prefer Hermes for routing/sessions/compression; custom for the quota guard, board orchestration, GUI-test flow).
+4. If a real Hermes install is available, do **PKG-1** (resolve the `# VERIFY:` markers in `scripts/setup-ama-profiles.sh`) and **PKG-2** (end-to-end install test). If not, mark them blocked-on-environment and proceed.
+5. Then continue the `core/` build from **B0-2** (project skeleton) onward.
 
 ---
 
 ## TASK CHECKLIST (V1 pilot — from BUILD_PLAN.md)
+
+### Packaging — Hermes tap (ADR-0002)
+- [x] Author 8 skills (`skills/ama-*`)
+- [x] Author 5 bundles (`skill-bundles/ama-*.yaml`)
+- [x] Draft 6 profile `SOUL.md` (`profiles/ama-*`)
+- [x] `config/settings.yaml` (tier→model + board seats)
+- [x] `scripts/setup-ama-profiles.sh` (profile bootstrap)
+- [x] `templates/PROJECT_BRIEF.md`
+- [ ] PKG-1 Verify setup script against real Hermes (resolve `# VERIFY:` markers)
+- [ ] PKG-2 End-to-end install test (tap add → setup → profiles/skills/bundles usable)
+- [ ] PKG-3 Dry-run framework-vs-project flow on a throwaway project
 
 ### Phase B0 — Foundations
 - [ ] B0-1 Verify Hermes & reconcile design (ADR-0001)
@@ -55,12 +67,12 @@ Concretely:
 
 ## LAST SESSION SUMMARY
 
-### Handoff — 2026-05-26 — architecture/packaging session
-- DONE this session: Verified (against real Nous `hermes-agent` docs) that Hermes has native **skills, bundles, taps, and profiles**. Decided and recorded the **packaging/distribution architecture** as `docs/adr/ADR-0002`: repo → Hermes tap; ~8 focused skills (the *how*); new dedicated AMA profiles for identity (the *who*, in their own `SOUL.md`); keep custom `core/`; per-project `PROJECT_BRIEF.md`. No code written yet; this was design lock-in.
-- STATE: build branch `claude/autonomous-agent-framework-5MdEG`, no build/tests yet, last work = ADR-0002 + this STATE update.
-- LEARNED / GOTCHAS: (1) Never write the human's existing profile `SOUL.md`; only profiles AMA creates. (2) Hermes already does routing/sessions/compression — don't rebuild these in `core/`; reconcile in B0-1. (3) Hub/URL skills are security-scanned — author skills to read clean. (4) "AMA" name + repo rename is a human decision/settings action.
-- NEXT: see "NEXT SESSION STARTS HERE" — B0-1 (Hermes reconciliation/ADR-0001), now explicitly scoped to settle `core/`-vs-Hermes overlap; then scaffold the tap (`skills/`, `skill-bundles/`, profile setup) and refactor `prompts/` into skill bodies + new-profile `SOUL.md` drafts.
-- BLOCKERS / WAITING ON HUMAN: name confirmation ("AMA"); provider keys/Telegram token (mock until supplied).
+### Handoff — 2026-05-26 — packaging build session
+- DONE this session: Built the full packaging scaffold on top of ADR-0002. Authored **8 skills** (`skills/ama-*`), **5 bundles** (`skill-bundles/ama-*.yaml`), **6 dedicated-profile `SOUL.md`** drafts (`profiles/ama-*`), `config/settings.yaml`, an idempotent `scripts/setup-ama-profiles.sh`, and `templates/PROJECT_BRIEF.md`. Rewrote the README around the portable install/use model and appended a "Packaging as a Hermes tap" section (PKG-1/2/3) to BUILD_PLAN. Authoring was done by Haiku subagents; every file was reviewed and corrected before each commit.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; tap scaffold complete and pushed (commits up to `9ad4767`); no `core/` code or tests yet; tap NOT yet tested on a real Hermes.
+- LEARNED / GOTCHAS: (1) Skills must be portable — no hardcoded build-branch names or AMA-internal task IDs (fixed several such leaks). (2) Bundle `instruction:` is a top-level YAML key (sibling of `skills:`). (3) The `/ama-board` bundle is intentionally lean `[ama-board, ama-session-handoff]` — keep board SOULs consistent with it. (4) `scripts/setup-ama-profiles.sh` has `# VERIFY:` markers — exact Hermes CLI must be confirmed on a real install (PKG-1). (5) Skills are instructions-first; they reference `core/` scripts only as optional helpers. (6) Haiku subagents sometimes revise a file after a first write — re-read before final review/commit.
+- NEXT: B0-1 (ADR-0001 reconciliation, unblocked) → PKG-1/PKG-2 if a Hermes env exists → continue `core/` from B0-2.
+- BLOCKERS / WAITING ON HUMAN: confirm the "AMA" name + GitHub repo rename (a settings action you perform); provide provider keys/Telegram token when ready (mock until then); PKG-1/2 need a real Hermes install to verify CLI commands.
 
 ---
 
