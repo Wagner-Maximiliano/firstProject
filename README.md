@@ -42,19 +42,28 @@ prompts/                   # starter agent prompts (used in skills)
 
 ### Steps
 
-1. Add the AMA framework as a Hermes tap:
+> You need a **local clone** of this repo to run the setup script — it copies the profile `SOUL.md` files and bundles from the working tree. The `hermes skills tap add` step is separate: it only tells Hermes where to fetch the *skills* from.
+
+1. **Clone the framework and enter the repo** (everything currently lives on the build branch):
    ```bash
-   hermes skills tap add <owner>/<repo>
-   # Example: hermes skills tap add wagner-maximiliano/firstProject
+   git clone https://github.com/Wagner-Maximiliano/firstproject.git
+   cd firstproject
+   git checkout claude/autonomous-agent-framework-5MdEG
    ```
 
-2. Run the setup script to create dedicated profiles and install skills:
+2. **Register the tap with Hermes** so the skills become installable:
+   ```bash
+   hermes skills tap add Wagner-Maximiliano/firstproject
+   ```
+   **Note:** `tap add` fetches from the repo's *default* branch. Until the build branch is merged to the default branch, either merge it first or check whether your Hermes version accepts a branch/ref argument (`hermes skills tap add --help`). Tracked as PKG-1.
+
+3. **Run the setup script from the repo root** — creates the six AMA profiles, sets their model tiers from `config/settings.yaml`, copies each `SOUL.md`, and installs the skills/bundles:
    ```bash
    bash scripts/setup-ama-profiles.sh
    ```
-   This creates the six AMA profiles, configures their model tiers from `config/settings.yaml`, and installs the skills/bundles into each.
+   The script `cd`s to its own repo root, so `bash /full/path/to/firstproject/scripts/setup-ama-profiles.sh` works too.
 
-   **Note:** The script contains `# VERIFY:` markers because exact Hermes CLI commands may vary by version. Check `hermes --help`, `hermes profile --help`, and `hermes skills --help` to confirm the commands match your Hermes version.
+   **Note:** the script has `# VERIFY:` markers because exact Hermes CLI commands vary by version. Check `hermes --help`, `hermes profile --help`, and `hermes skills --help` to confirm. (Validating these end-to-end is PKG-1/PKG-2.)
 
 ## Use AMA on a new project
 
