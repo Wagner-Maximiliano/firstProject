@@ -36,19 +36,32 @@ declare -A PROFILES=(
   [ama-board-c]="AMA Board Seat C (OpenRouter lens, decisions)|BOARD"
 )
 
-# Tier to model mapping (must match config/settings.yaml)
-declare -A TIER_MODELS=(
-  [T3]="anthropic/claude-opus-4-1"
-  [T2]="anthropic/claude-sonnet-4-20250514"
-  [T1]="openrouter/nvidia/nemotron-mini"
+# AMA reuses the models you already have in Hermes. The script asks which existing
+# Hermes model to use for each tier/seat (see gather_models below). These fallbacks
+# are used ONLY when a choice isn't provided interactively or via an AMA_MODEL_* env
+# var - they are just examples (latest Claude generation); override freely.
+declare -A FALLBACK_MODELS=(
+  [T1]="claude-haiku-4-5-20251001"
+  [T2]="claude-sonnet-4-6"
+  [T3]="claude-opus-4-7"
+  [seat_a]="claude-opus-4-7"
+  [seat_b]="gpt-4o"
+  [seat_c]="gemini-2.0-flash"
 )
 
-# Board seat to model mapping (must match config/settings.yaml)
-declare -A BOARD_MODELS=(
-  [seat_a]="anthropic/claude-opus-4-1"
-  [seat_b]="openai/gpt-4o"
-  [seat_c]="openrouter/anthropic/claude-opus"
+# Env-var name per assignment key - lets an installing agent pass the human's choices
+# non-interactively instead of answering prompts.
+declare -A ENV_VARS=(
+  [T1]="AMA_MODEL_T1"
+  [T2]="AMA_MODEL_T2"
+  [T3]="AMA_MODEL_T3"
+  [seat_a]="AMA_MODEL_SEAT_A"
+  [seat_b]="AMA_MODEL_SEAT_B"
+  [seat_c]="AMA_MODEL_SEAT_C"
 )
+
+# Filled in by gather_models().
+declare -A CHOSEN_MODELS=()
 
 # ============================================================================
 # Helpers
@@ -82,6 +95,43 @@ profile_exists() {
   fi
 }
 
+# Decide which existing Hermes model backs each tier/seat. AMA reuses your Hermes
+# models rather than defining its own. Order of preference per assignment:
+#   1) an AMA_MODEL_* environment variable (non-interactive / agent-driven setup)
+#   2) an interactive prompt (when a human runs this at a terminal)
+#   3) the fallback example above (last resort, with a warning)
+gather_models() {
+  log ""
+  log "Choosing which of your existing Hermes models to use for each tier/seat."
+  # VERIFY: command to list configured Hermes models (e.g. `hermes models list`
+  # or `hermes config get model`). Adjust to your version; this is best-effort.
+  if hermes models list >/dev/null 2>&1; then
+    log "Your configured Hermes models:"
+    hermes models list >&2 || true
+  else
+    log "(Could not auto-list Hermes models; enter the model names/aliases you use.)"
+  fi
+
+  local keys=(T1 T2 T3 seat_a seat_b seat_c)
+  local key env_name from_env fallback answer
+  for key in "${keys[@]}"; do
+    env_name="${ENV_VARS[$key]}"
+    from_env="${!env_name:-}"
+    fallback="${FALLBACK_MODELS[$key]}"
+
+    if [ -n "$from_env" ]; then
+      CHOSEN_MODELS[$key]="$from_env"
+      log "  $key = $from_env (from \$$env_name)"
+    elif [ -t 0 ]; then
+      read -r -p "[AMA Setup] Model for $key [default: $fallback]: " answer
+      CHOSEN_MODELS[$key]="${answer:-$fallback}"
+    else
+      CHOSEN_MODELS[$key]="$fallback"
+      log_warn "$key: no \$$env_name and not interactive -> using fallback '$fallback'"
+    fi
+  done
+}
+
 # ============================================================================
 # Main
 # ============================================================================
@@ -95,6 +145,9 @@ if ! command -v hermes &> /dev/null; then
 fi
 
 log "Hermes found: $(hermes --version 2>&1 || echo 'version unknown')"
+
+# Ask which existing Hermes model to use for each tier/seat (or read AMA_MODEL_* env).
+gather_models
 
 # Create each AMA profile.
 for profile_name in "${!PROFILES[@]}"; do
@@ -116,15 +169,14 @@ for profile_name in "${!PROFILES[@]}"; do
     log_ok "Created profile $profile_name"
   fi
 
-  # Set the model.default in the profile's config.
+  # Set the model.default in the profile's config (chosen in gather_models).
   if [ "$tier" = "BOARD" ]; then
-    # Board seats: map by seat name (e.g., ama-board-a → seat_a → model)
-    seat_key="${profile_name#ama-board-}"
-    seat_key="seat_$seat_key"
-    model="${BOARD_MODELS[$seat_key]}"
+    # Board seats: map by seat name (e.g. ama-board-a -> seat_a -> chosen model)
+    seat_key="seat_${profile_name#ama-board-}"
+    model="${CHOSEN_MODELS[$seat_key]}"
   else
-    # Regular profiles: tier → model
-    model="${TIER_MODELS[$tier]}"
+    # Regular profiles: tier -> chosen model
+    model="${CHOSEN_MODELS[$tier]}"
   fi
 
   log "Setting $profile_name model to: $model"
@@ -180,10 +232,7 @@ log ""
 log "Next steps:"
 log "  1. Verify Hermes CLI commands match your version: hermes --help, hermes profile --help, hermes skills --help"
 log "  2. For each profile, verify model config: hermes -p <profile-name> config show"
-log "  3. Set your API keys in the environment:"
-log "     export ANTHROPIC_API_KEY=<your-key>"
-log "     export OPENAI_API_KEY=<your-key>"
-log "     export OPENROUTER_API_KEY=<your-key>"
+log "  3. No API keys to set here - AMA reuses the providers/keys already in your Hermes config."
 log "  4. Kick off a build session with the Planner:"
 log "     hermes -p ama-planner /ama-plan"
 log ""

@@ -33,11 +33,8 @@ prompts/                   # starter agent prompts (used in skills)
 
 ### Prerequisites
 
-1. **Hermes** installed: https://github.com/NousResearch/hermes-agent
-2. **API keys** set as environment variables (never committed):
-   - `ANTHROPIC_API_KEY` — Anthropic
-   - `OPENAI_API_KEY` — OpenAI
-   - `OPENROUTER_API_KEY` — OpenRouter (for free + 3rd-vendor models)
+1. **Hermes installed and already configured** with the providers/models you use and your Telegram channel: https://github.com/NousResearch/hermes-agent
+2. **AMA reuses your Hermes setup** — it does **not** need its own API keys. Models, provider auth, and the human channel all come from Hermes. At setup you choose *which* of your existing Hermes models backs each tier and board seat (interactively, or via `AMA_MODEL_*` env vars) — see the Configuration section.
 3. **Human channel (Telegram):** AMA talks to you through **Hermes' existing Telegram channel** — if Hermes is already connected to Telegram (as in your setup), AMA reuses it and **no separate bot is required**. A standalone `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` is only needed if you want AMA to message you with no active Hermes session (to be confirmed in B0-1).
 
 ### Steps
@@ -122,47 +119,29 @@ Each profile has its own `SOUL.md` (identity) and loads the skills it needs via 
 
 Skills carry the *how* (shared procedures). Agent identity (the *who*) lives in profile `SOUL.md` files.
 
-## Configuration (tier→model)
+## Configuration (tier/seat → your Hermes models)
 
-Model tiers are configured in `config/settings.yaml`. Adjust them without code changes:
+AMA reuses the models you already have in Hermes. You don't define provider keys or a model catalog here — you just choose which **existing Hermes model** plays each role:
 
-```yaml
-tiers:
-  T1:
-    provider: "openrouter"
-    model: "nvidia/nemotron-mini"  # cheap, high-volume
-  T2:
-    provider: "anthropic"
-    model: "claude-sonnet-4-20250514"  # mid-range: real coding, review
-  T3:
-    provider: "anthropic"
-    model: "claude-opus-4-1"  # frontier: planning, hard decisions
+- **Tiers:** `T1` (cheap, high-volume), `T2` (real coding/review), `T3` (planning, hard calls).
+- **Board seats:** three seats — pick three *different* vendors where you can, for real cross-vendor diversity.
 
-board:
-  seat_a:
-    provider: "anthropic"
-    model: "claude-opus-4-1"
-  seat_b:
-    provider: "openai"
-    model: "gpt-4o"
-  seat_c:
-    provider: "openrouter"
-    model: "anthropic/claude-opus"
+`config/settings.yaml` records these roles (and optional fallback examples). The actual assignment happens at **setup**: `scripts/setup-ama-profiles.sh` asks which Hermes model to use for each tier/seat and writes it to the profile's `model.default`.
+
+To run setup non-interactively (e.g. an agent installing AMA on your behalf, after asking you), set these before running the script:
+
+```bash
+export AMA_MODEL_T1=...      AMA_MODEL_T2=...      AMA_MODEL_T3=...
+export AMA_MODEL_SEAT_A=...  AMA_MODEL_SEAT_B=...  AMA_MODEL_SEAT_C=...
 ```
 
-To retune tiers:
-1. Edit `config/settings.yaml` — change model names or which tiers use which providers.
-2. Restart the agents; they pick up the new routing automatically.
-3. No code changes needed — tiers are configuration, not hardcoded.
+To retune later, re-run the script or set a profile's model directly:
 
-**Environment variables** (never commit):
-- `ANTHROPIC_API_KEY` — Anthropic API key
-- `OPENAI_API_KEY` — OpenAI API key
-- `OPENROUTER_API_KEY` — OpenRouter API key (free tier + 3rd-vendor models)
+```bash
+hermes -p ama-builder config set model.default <your-model>   # VERIFY exact syntax
+```
 
-The **human channel** is Hermes' existing Telegram connection — AMA reuses it, so no separate Telegram bot token is required for normal use. (Optional `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` only if AMA must reach you with no active Hermes session.)
-
-Set these in your session environment's secret settings, not in the repo.
+No separate API keys or Telegram token are needed — providers, model auth, and the human channel all come from your Hermes configuration. (Optional `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` only if AMA must reach you with no active Hermes session.)
 
 ## Developing the AMA framework itself
 

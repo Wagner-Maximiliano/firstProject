@@ -1,41 +1,35 @@
-# AMA Framework Configuration
-# Model tier mapping and multi-vendor board assignment.
+# AMA model routing
 #
-# API KEYS: Never commit keys to this file. Set these in your environment:
-#   - ANTHROPIC_API_KEY
-#   - OPENAI_API_KEY
-#   - OPENROUTER_API_KEY
+# AMA does NOT define its own provider keys or model catalog. It REUSES the models
+# you already have configured in Hermes. At setup time, scripts/setup-ama-profiles.sh
+# asks which of your existing Hermes models to assign to each tier and board seat,
+# and writes that choice into each AMA profile (the profile's `model.default`).
 #
-# Profile assignments (by tier):
-#   ama-planner      → T3 (high-reasoning, frontier)
-#   ama-builder      → T2 (mid-range, real coding)
-#   ama-reviewer     → T2 (mid-range, different model than builder)
-#   ama-board-a      → seat_a (Anthropic)
-#   ama-board-b      → seat_b (OpenAI)
-#   ama-board-c      → seat_c (OpenRouter)
+# This file only records the ROLE each tier/seat plays, plus an optional fallback
+# example for non-interactive setup. Leave a `model:` empty to be prompted at setup,
+# or set the matching AMA_MODEL_* env var before running the setup script.
+#
+# Profile -> tier/seat mapping:
+#   ama-planner   -> T3          ama-board-a -> seat_a
+#   ama-builder   -> T2          ama-board-b -> seat_b
+#   ama-reviewer  -> T2 (a different model instance than the builder)
+#                                ama-board-c -> seat_c
+#
+# Board tip: pick THREE different vendors for real cross-vendor diversity
+# (e.g. one Anthropic, one OpenAI, one Google/OSS) - don't reuse one vendor twice.
 
 tiers:
-  T1:
-    # Cheap, high-volume: triage, summaries, adversarial review
-    provider: openrouter
-    model: nvidia/nemotron-mini
-  T2:
-    # Mid-range: real coding, code review
-    provider: anthropic
-    model: claude-sonnet-4-20250514
-  T3:
-    # Frontier: planning, hard problems
-    provider: anthropic
-    model: claude-opus-4-1
+  T1:   # cheap, high-volume: triage, summaries, adversarial review
+    model:    # env AMA_MODEL_T1   | fallback example: claude-haiku-4-5-20251001 (or a free OpenRouter model)
+  T2:   # mid-range: real coding, code review
+    model:    # env AMA_MODEL_T2   | fallback example: claude-sonnet-4-6
+  T3:   # frontier: planning, hard decisions
+    model:    # env AMA_MODEL_T3   | fallback example: claude-opus-4-7
 
-board:
-  # Three-vendor approval board; each seat evaluates from its lens
+board:  # three seats; choose three DIFFERENT vendors where you can
   seat_a:
-    provider: anthropic
-    model: claude-opus-4-1
+    model:    # env AMA_MODEL_SEAT_A | fallback example: claude-opus-4-7
   seat_b:
-    provider: openai
-    model: gpt-4o
+    model:    # env AMA_MODEL_SEAT_B | fallback example: an OpenAI frontier model
   seat_c:
-    provider: openrouter
-    model: anthropic/claude-opus
+    model:    # env AMA_MODEL_SEAT_C | fallback example: a Google/OSS frontier model

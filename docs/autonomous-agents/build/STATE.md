@@ -33,7 +33,7 @@ Concretely:
 - [x] Author 8 skills (`skills/ama-*`)
 - [x] Author 5 bundles (`skill-bundles/ama-*.yaml`)
 - [x] Draft 6 profile `SOUL.md` (`profiles/ama-*`)
-- [x] `config/settings.yaml` (tier→model + board seats)
+- [x] `config/settings.yaml` (tier/seat *roles*; models chosen from Hermes at setup)
 - [x] `scripts/setup-ama-profiles.sh` (profile bootstrap)
 - [x] `templates/PROJECT_BRIEF.md`
 - [ ] PKG-1 Verify setup script against real Hermes (resolve `# VERIFY:` markers)
@@ -67,6 +67,12 @@ Concretely:
 
 ## LAST SESSION SUMMARY
 
+### Handoff — 2026-05-27 — model-reuse design change
+- DONE: Reworked model routing to **reuse the human's existing Hermes models** instead of hardcoding IDs (human-directed). `config/settings.yaml` now records tier/seat *roles* only. `scripts/setup-ama-profiles.sh` gained `gather_models()` — it lists Hermes models (best-effort, `# VERIFY`) and picks each tier/seat model from `AMA_MODEL_*` env vars → interactive prompt → commented fallback (latest Claude IDs). Removed the per-AMA API-key requirement from README + script ("next steps"). README Prerequisites + Configuration rewritten around "AMA reuses your Hermes setup". `bash -n` passes.
+- DECISIONS captured (see Resolved): reuse Hermes models + ask-at-setup; board seat C chosen at setup (pick 3 distinct vendors); pilot deferred to B1-1.
+- STILL OPEN / `# VERIFY`: exact Hermes command to **list** configured models, and `hermes -p <profile> config set model.default` syntax — both to confirm in PKG-1 on a real Hermes install.
+- NEXT: unchanged — B0-1 (ADR-0001 reconciliation) → PKG-1/2 if a Hermes env exists → `core/` from B0-2.
+
 ### Handoff — 2026-05-26 — packaging build session
 - DONE this session: Built the full packaging scaffold on top of ADR-0002. Authored **8 skills** (`skills/ama-*`), **5 bundles** (`skill-bundles/ama-*.yaml`), **6 dedicated-profile `SOUL.md`** drafts (`profiles/ama-*`), `config/settings.yaml`, an idempotent `scripts/setup-ama-profiles.sh`, and `templates/PROJECT_BRIEF.md`. Rewrote the README around the portable install/use model and appended a "Packaging as a Hermes tap" section (PKG-1/2/3) to BUILD_PLAN. Authoring was done by Haiku subagents; every file was reviewed and corrected before each commit.
 - STATE: build branch `claude/autonomous-agent-framework-5MdEG`; tap scaffold complete and pushed (commits up to `9ad4767`); no `core/` code or tests yet; tap NOT yet tested on a real Hermes.
@@ -84,14 +90,16 @@ Concretely:
 
 ## OPEN QUESTIONS / BLOCKERS
 
-- [ ] Provider keys (Anthropic / OpenAI / OpenRouter) not yet confirmed in the environment → using the mock provider until the human supplies them (see HUMAN_RUNBOOK.md "One-time setup").
-- [ ] Pilot toy-project idea not chosen yet → the first planning run (B1-1) can pick a simple one (e.g. single-screen to-do list) unless the human specifies.
+- [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Still confirm in B0-1 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
 - [ ] **`core/` vs Hermes-native overlap** must be settled in B0-1/ADR-0001 before building B0-4 (gateway) and B0-5 (state): prefer Hermes-native routing/sessions/compression; build custom only for real gaps (quota guard, board orchestration, GUI-test flow). **Telegram is part of this:** confirm whether background/proactive messages (e.g. the watchdog with no active session) can go through Hermes' channel or need a direct path.
 
 ### Resolved
 - **Portability** (was open): the framework is NOT copied into projects. It's a **Hermes tap** installed once per machine; each project carries only a small `PROJECT_BRIEF.md` + `STATE.md`. See ADR-0002.
 - **Name confirmed: "AMA".** (An optional GitHub repo rename stays a human settings action; if you rename, update the `AMA_TAP_REPO` value / your `hermes skills tap add` argument to match.)
 - **Human channel = Hermes' existing Telegram** (human confirmed it's configured & connected): AMA reuses it, so no separate AMA bot/token is needed for normal interactive use. Only out-of-band messaging needs the B0-1 check above.
+- **Model routing reuses Hermes' existing models** (2026-05-27, human-directed): AMA does **not** hardcode model IDs or carry its own provider keys. `config/settings.yaml` records only the *role* of each tier (T1/T2/T3) and board seat; the **setup script asks the human which existing Hermes model to assign** to each role (interactive prompt, or `AMA_MODEL_*` env vars so an installing agent can pass the human's choices non-interactively). Latest-Claude IDs (Opus 4.7 / Sonnet 4.6 / Haiku 4.5) are kept only as commented fallback examples.
+- **Board seat C vendor** (was open, Q2): not pinned in the repo — chosen at setup from existing Hermes models. Guidance: pick three *different* vendors across seats A/B/C for real cross-vendor diversity.
+- **Pilot toy-project: deferred** (human chose "decide later") — the Planner proposes one at planning time (B1-1).
 
 ---
 
