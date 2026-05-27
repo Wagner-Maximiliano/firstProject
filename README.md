@@ -38,8 +38,7 @@ prompts/                   # starter agent prompts (used in skills)
    - `ANTHROPIC_API_KEY` — Anthropic
    - `OPENAI_API_KEY` — OpenAI
    - `OPENROUTER_API_KEY` — OpenRouter (for free + 3rd-vendor models)
-   - `TELEGRAM_BOT_TOKEN` — Telegram bot token
-   - `TELEGRAM_CHAT_ID` — your Telegram chat ID
+3. **Human channel (Telegram):** AMA talks to you through **Hermes' existing Telegram channel** — if Hermes is already connected to Telegram (as in your setup), AMA reuses it and **no separate bot is required**. A standalone `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` is only needed if you want AMA to message you with no active Hermes session (to be confirmed in B0-1).
 
 ### Steps
 
@@ -151,8 +150,8 @@ To retune tiers:
 - `ANTHROPIC_API_KEY` — Anthropic API key
 - `OPENAI_API_KEY` — OpenAI API key
 - `OPENROUTER_API_KEY` — OpenRouter API key (free tier + 3rd-vendor models)
-- `TELEGRAM_BOT_TOKEN` — Telegram bot token
-- `TELEGRAM_CHAT_ID` — your Telegram chat ID
+
+The **human channel** is Hermes' existing Telegram connection — AMA reuses it, so no separate Telegram bot token is required for normal use. (Optional `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` only if AMA must reach you with no active Hermes session.)
 
 Set these in your session environment's secret settings, not in the repo.
 

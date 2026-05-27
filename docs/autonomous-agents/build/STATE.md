@@ -84,13 +84,14 @@ Concretely:
 
 ## OPEN QUESTIONS / BLOCKERS
 
-- [ ] Provider keys + Telegram token not yet confirmed in the environment → using mock provider until the human supplies them (see HUMAN_RUNBOOK.md "One-time setup").
+- [ ] Provider keys (Anthropic / OpenAI / OpenRouter) not yet confirmed in the environment → using the mock provider until the human supplies them (see HUMAN_RUNBOOK.md "One-time setup").
 - [ ] Pilot toy-project idea not chosen yet → the first planning run (B1-1) can pick a simple one (e.g. single-screen to-do list) unless the human specifies.
-- [ ] **Working name "AMA"** collides with "Ask Me Anything" in search/docs. Human to confirm the name (and the GitHub repo rename, which is a GitHub *settings* action the human performs — not scriptable here).
-- [ ] **`core/` vs Hermes-native overlap** must be settled in B0-1/ADR-0001 before building B0-4 (gateway) and B0-5 (state): prefer Hermes-native routing/sessions/compression; build custom only for real gaps (quota guard, board orchestration, GUI-test flow).
+- [ ] **`core/` vs Hermes-native overlap** must be settled in B0-1/ADR-0001 before building B0-4 (gateway) and B0-5 (state): prefer Hermes-native routing/sessions/compression; build custom only for real gaps (quota guard, board orchestration, GUI-test flow). **Telegram is part of this:** confirm whether background/proactive messages (e.g. the watchdog with no active session) can go through Hermes' channel or need a direct path.
 
 ### Resolved
 - **Portability** (was open): the framework is NOT copied into projects. It's a **Hermes tap** installed once per machine; each project carries only a small `PROJECT_BRIEF.md` + `STATE.md`. See ADR-0002.
+- **Name confirmed: "AMA".** (An optional GitHub repo rename stays a human settings action; if you rename, update the `AMA_TAP_REPO` value / your `hermes skills tap add` argument to match.)
+- **Human channel = Hermes' existing Telegram** (human confirmed it's configured & connected): AMA reuses it, so no separate AMA bot/token is needed for normal interactive use. Only out-of-band messaging needs the B0-1 check above.
 
 ---
 
