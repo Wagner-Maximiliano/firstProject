@@ -6,27 +6,23 @@
 
 ## CURRENT STATUS
 
-- **Phase:** Packaging PKG-1/PKG-2/PKG-3 completed; next is B0-2 skeleton
-- **Active task:** _PKG-3 completed in this session via throwaway-repo dry-run; next start is B0-2 project skeleton_
+- **Phase:** B0 foundations in progress; B0-2 project skeleton completed, next is B0-3 GitHub backbone
+- **Active task:** _B0-2 completed in this session (skeleton + setup + green checks); next start is B0-3_
 - **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, tap scaffold, and project bootstrap assets; build here, keep `master` untouched)_
-- **Build health:** _no `core/` code or tests yet; packaging assets are authored; setup script now reconciled to Hermes v0.15.1 and end-to-end install path verified (tap add + setup + profile/model/skill-bundle checks)._
+- **Build health:** _B0-2 skeleton now present (`pyproject.toml`, `scripts/setup.sh`, `core/` package layout, placeholder tests). Local validation green: `pytest`, `ruff check .`, `black --check .`, `mypy core tests`._
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
 ---
 
 ## ▶ NEXT SESSION STARTS HERE
 
-**Task B0-2 — Project skeleton.**
-PKG-1, PKG-2, and PKG-3 are complete.
+**Task B0-3 — GitHub backbone.**
+B0-2 is complete.
 Concretely next:
-1. Create B0-2 skeleton artifacts:
-   - `scripts/setup.sh`
-   - `pyproject.toml`
-   - ruff/black/mypy configuration
-   - starter `core/` package layout
-   - starter `tests/` with placeholder passing test
-2. Ensure local bootstrap path works from clean state (`scripts/setup.sh` then `pytest`).
-3. Commit B0-2 increment and update STATE with exact run commands and gotchas.
+1. Add CI workflow under `.github/workflows/` that runs lint/type/tests on pushes and PRs.
+2. Add GitHub issue + PR templates and align with AMA routing contract.
+3. Document/enforce trunk protection requirements for `main` (PR required, CI required, no direct push).
+4. Validate with a throwaway PR flow where possible, or record exact blockers if GitHub auth/push remains unavailable.
 
 ---
 
@@ -45,7 +41,7 @@ Concretely next:
 
 ### Phase B0 — Foundations
 - [x] B0-1 Verify Hermes & reconcile design (ADR-0001)
-- [ ] B0-2 Project skeleton (venv, pyproject, lint/type, pytest, structure)
+- [x] B0-2 Project skeleton (venv, pyproject, lint/type, pytest, structure)
 - [ ] B0-3 GitHub backbone (branch protection, Projects board, labels, CI)
 - [ ] B0-4 Model gateway over Hermes (tier→provider, mock provider, smoke tests)
 - [ ] B0-5 State store + checkpoint/resume (SQLite)
@@ -69,6 +65,15 @@ Concretely next:
 ---
 
 ## LAST SESSION SUMMARY
+
+### Handoff — 2026-05-31 — B0-2 project skeleton session
+- DONE this session: Implemented B0-2 skeleton artifacts: `pyproject.toml`, executable `scripts/setup.sh`, `.pre-commit-config.yaml`, starter `core/` package layout (`gateway/`, `agents/`, `orchestrator/`, `board/`, `quality/`, `watchdog/`, `human/`, `state/`), and `tests/test_smoke.py`.
+- DONE this session (fixes): Reconciled setup to this environment constraints (`python3 -m venv` unavailable due missing `ensurepip`), switched setup flow to `uv venv` + `uv pip install -e ".[dev]`.
+- DONE this session (verification): Local checks green from fresh venv path: `./scripts/setup.sh`, `pytest`, `ruff check .`, `black --check .`, `mypy core tests`.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; B0-2 checked off; next task is B0-3 GitHub backbone.
+- LEARNED / GOTCHAS: In this WSL environment, a failed first venv attempt can leave a partial `.venv` (only `pyvenv.cfg`), which breaks activation. If that happens, move aside the broken directory and rerun setup.
+- NEXT: start B0-3 by adding CI workflow + validating GitHub templates/branch-protection contract; if push/auth prevents live verification, log exact blocker evidence in STATE.
+- BLOCKERS / WAITING ON HUMAN: push/auth blocker may still affect remote verification (`git push` over HTTPS lacks configured credentials in this session).
 
 ### Handoff — 2026-05-31 — PKG-3 dry-run verification session
 - DONE this session: Executed PKG-3 on throwaway repo `/tmp/ama-pkg3-throwaway-20260531-195024` with `python3 scripts/bootstrap_ama_project.py --repo <path> --mode existing`; verified expected bootstrap files were created under `.ama/` and `.github/` and project tree remained framework-light (no framework code copied in).
@@ -145,4 +150,9 @@ Concretely next:
 
 ## ENVIRONMENT / SETUP NOTES
 
-_Fill in as discovered: Python version, how to run setup/tests, expected env-var names, Hermes install notes, anything a fresh session needs to get running fast._
+- Python in this environment: `python3` available; `python` shim and `pip` module not reliable for project bootstrap.
+- Use `uv` for venv + deps (`uv venv .venv` and `uv pip install -e ".[dev]`) — this is what `scripts/setup.sh` now does.
+- If `.venv` exists but activation fails, inspect for partial venv (for example only `pyvenv.cfg` after failed `ensurepip` path), move it aside, then rerun `./scripts/setup.sh`.
+- Current baseline validation command set:
+  - `./scripts/setup.sh`
+  - `source .venv/bin/activate && pytest && ruff check . && black --check . && mypy core tests`

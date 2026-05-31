@@ -18,7 +18,13 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-DEFAULT_LABELS = Path(__file__).resolve().parents[1] / "templates" / "project-ama" / ".github" / "ama-labels.json"
+DEFAULT_LABELS = (
+    Path(__file__).resolve().parents[1]
+    / "templates"
+    / "project-ama"
+    / ".github"
+    / "ama-labels.json"
+)
 API_BASE = "https://api.github.com"
 
 
@@ -26,7 +32,11 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Create or update AMA labels in GitHub")
     parser.add_argument("--repo", required=True, help="GitHub repository in owner/name form")
     parser.add_argument("--labels", default=str(DEFAULT_LABELS), help="Path to label JSON file")
-    parser.add_argument("--token", default=os.environ.get("GITHUB_TOKEN", ""), help="GitHub token (defaults to GITHUB_TOKEN)")
+    parser.add_argument(
+        "--token",
+        default=os.environ.get("GITHUB_TOKEN", ""),
+        help="GitHub token (defaults to GITHUB_TOKEN)",
+    )
     return parser.parse_args()
 
 
