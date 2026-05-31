@@ -1,0 +1,42 @@
+repo_mode: existing
+managed_issue_boundary: ama-labeled-only
+issue_creation_mode: automatic-from-approved-plan
+issue_release_mode: phase-batches
+dependency_mode: explicit-metadata
+parallel_execution:
+  enabled: true
+  overlap_policy: smart-balance
+  overlap_inputs:
+    - issue-text
+    - labels
+    - repo-structure
+    - manual-override
+human_wait_policy:
+  reminder_only: true
+  reminder_interval_hours: 24
+merge_policy:
+  normal_tasks: auto-merge-after-green-review
+  risky_tasks: extra-gate-required
+done_policy:
+  require_working_change: true
+  require_tests_green: true
+  require_proof_of_outcome: true
+board_triggers:
+  - security-auth-secrets
+  - schema-or-data-migration
+  - infrastructure-or-deployment
+  - meaningful-new-dependency
+  - irreversible-or-high-blast-radius
+labels:
+  owner:
+    - ama:owner:orchestrator
+    - ama:owner:builder
+    - ama:owner:reviewer
+    - ama:owner:inverted-reviewer
+    - ama:owner:board
+    - ama:owner:human
+  tier:
+    - ama:tier:t1
+    - ama:tier:t2
+    - ama:tier:t3
+    - ama:tier:board

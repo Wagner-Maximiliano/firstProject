@@ -1,179 +1,168 @@
 # AMA — Autonomous Multi-Agent Framework
 
-**AMA is a portable, Hermes-based framework for driving software projects from idea to ship with minimal human involvement.** Delivered as a global Hermes tap (installed once per machine), it orchestrates a team of AI agents through planning, building, review, and approval—the human is only needed at three touchpoints: planning sign-off, GUI testing, and go-live approval.
+AMA is a portable, Hermes-based framework for running software projects with clearer structure and more automation.
 
-*AMA is a working name (avoiding "Ask Me Anything" collision).*
+In simple terms, AMA makes a project work more like a disciplined delivery team:
+- planning happens first
+- tasks live in GitHub issues
+- work is routed by labels
+- one task uses one branch and one PR
+- reviewers control merges
+- safe parallel work is allowed
+- humans are pulled in only at the right moments
 
-## How it's delivered
+This repository has two purposes:
+1. it contains the AMA framework itself
+2. it contains the docs and bootstrap assets for installing AMA into other repositories
 
-AMA is a **Hermes tap** — a reusable skill package installed globally on your machine (in `~/.hermes/`) and never copied into individual projects. It consists of:
+## What AMA adds to a project
 
-- **Skills** (`skills/`) — focused, reusable procedures (e.g., planning, building, review, quota guard).
-- **Bundles** (`skill-bundles/`) — YAML compositions that load multiple skills at once under single slash commands (`/ama-plan`, `/ama-build`, etc.) with setup instructions.
-- **Profiles** (`profiles/`) — six dedicated AMA identities (`ama-planner`, `ama-builder`, `ama-reviewer`, `ama-board-a/b/c`) with their own `SOUL.md` (role identity), never touching your existing Hermes profiles.
-- **Configuration** (`config/settings.yaml`) — tier-to-model routing and board seat assignments.
-- **Setup script** (`scripts/setup-ama-profiles.sh`) — one-time bootstrap: creates the profiles, installs skills/bundles, sets model tiers.
+AMA is designed to be brought into either:
+- a brand new repository
+- an existing repository that needs better structure and project management
 
-Real project instructions live in the **project's own repo** as a small `PROJECT_BRIEF.md` file (from `templates/`), not in the framework.
+The default operating model is:
+- AMA manages only AMA-labeled issues
+- tasks are created automatically from an approved plan
+- tasks are released in batches by phase
+- dependencies are explicit
+- parallel work is allowed, but overlap is checked first
+- implementation work is branch-per-task and PR-based
+- normal low-risk tasks can merge after green review and checks
+- risky tasks go through an extra gate
 
-Repo structure:
+## Core GitHub routing model
 
-```
-skills/                    # 8 focused skills (planning, build, review, board, GitHub, session handoff, testing, quota)
-profiles/                  # 6 dedicated SOUL.md files (Planner, Builder, Reviewer, Board A/B/C)
-skill-bundles/             # 5 bundles: ama-plan, ama-build, ama-review, ama-board, ama
-config/                    # settings.yaml (tier→model, board seats)
-scripts/                   # setup-ama-profiles.sh (one-time machine setup)
-templates/                 # PROJECT_BRIEF.md (template for each new project repo)
-docs/autonomous-agents/    # design & build docs
-prompts/                   # starter agent prompts (used in skills)
-```
+AMA uses two label families.
 
-## Install (one-time, per machine)
+Owner labels:
+- `ama:owner:orchestrator`
+- `ama:owner:builder`
+- `ama:owner:reviewer`
+- `ama:owner:inverted-reviewer`
+- `ama:owner:board`
+- `ama:owner:human`
 
-### Prerequisites
+Tier labels:
+- `ama:tier:t1`
+- `ama:tier:t2`
+- `ama:tier:t3`
+- `ama:tier:board`
 
-1. **Hermes installed and already configured** with the providers/models you use and your Telegram channel: https://github.com/NousResearch/hermes-agent
-2. **AMA reuses your Hermes setup** — it does **not** need its own API keys. Models, provider auth, and the human channel all come from Hermes. At setup you choose *which* of your existing Hermes models backs each tier and board seat (interactively, or via `AMA_MODEL_*` env vars) — see the Configuration section.
-3. **Human channel (Telegram):** AMA talks to you through **Hermes' existing Telegram channel** — if Hermes is already connected to Telegram (as in your setup), AMA reuses it and **no separate bot is required**. A standalone `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` is only needed if you want AMA to message you with no active Hermes session (to be confirmed in B0-1).
+Every AMA-managed issue should have exactly:
+- one owner label
+- one tier label
 
-### Steps
+See `docs/autonomous-agents/LABEL_ROUTING.md` for the routing contract.
 
-> You need a **local clone** of this repo to run the setup script — it copies the profile `SOUL.md` files and bundles from the working tree. The `hermes skills tap add` step is separate: it only tells Hermes where to fetch the *skills* from.
+## Installation
 
-1. **Clone the framework and enter the repo** (everything currently lives on the build branch):
-   ```bash
-   git clone https://github.com/Wagner-Maximiliano/firstproject.git
-   cd firstproject
-   git checkout claude/autonomous-agent-framework-5MdEG
-   ```
+There are two layers of setup.
 
-2. **Register the tap with Hermes** so the skills become installable:
-   ```bash
-   hermes skills tap add Wagner-Maximiliano/firstproject
-   ```
-   **Note:** `tap add` fetches from the repo's *default* branch. Until the build branch is merged to the default branch, either merge it first or check whether your Hermes version accepts a branch/ref argument (`hermes skills tap add --help`). Tracked as PKG-1.
+### 1. Install AMA into Hermes once
 
-3. **Run the setup script from the repo root** — creates the six AMA profiles, sets their model tiers from `config/settings.yaml`, copies each `SOUL.md`, and installs the skills/bundles:
-   ```bash
-   bash scripts/setup-ama-profiles.sh
-   ```
-   The script `cd`s to its own repo root, so `bash /full/path/to/firstproject/scripts/setup-ama-profiles.sh` works too.
-
-   **Note:** the script has `# VERIFY:` markers because exact Hermes CLI commands vary by version. Check `hermes --help`, `hermes profile --help`, and `hermes skills --help` to confirm. (Validating these end-to-end is PKG-1/PKG-2.)
-
-## Use AMA on a new project
-
-AMA uses a **repeatable flow** for each project:
-
-1. **Create or clone your project's own repository.** (AMA never touches it; you own it.)
-
-2. **Copy the template brief into your project:**
-   ```bash
-   cp templates/PROJECT_BRIEF.md /path/to/your-project/
-   cd /path/to/your-project/
-   ```
-
-3. **Fill in the brief** with your idea, constraints, and go-live criteria. (This is your one input; the agents read it first.)
-
-4. **Create a working branch** (never `main` or `master`):
-   ```bash
-   git checkout -b claude/build-project-v1
-   ```
-
-5. **Kick off planning:**
-   ```bash
-   hermes -p ama-planner /ama-plan
-   ```
-   The Planner reads your `PROJECT_BRIEF.md`, runs a progressive-disclosure planning interview, produces a plan (PRD + tech spec + task DAG + acceptance criteria), and pauses for your sign-off via Telegram/CLI.
-
-6. **Once you approve the plan,** building proceeds through the other profiles (`/ama-build`, `/ama-review`, etc.) until go-live.
-
-**Your project repo stays clean:** only the brief, a `STATE.md` the agents maintain, and the code they build. The AMA framework itself stays in `~/.hermes/` on your machine.
-
-## The agents (profiles) and what they load
-
-| Profile | Role | Tier | Bundle |
-|---------|------|------|--------|
-| `ama-planner` | Architect (planning) | T3 | `/ama-plan` |
-| `ama-builder` | Engineer (implementation) | T2 | `/ama-build` |
-| `ama-reviewer` | Gatekeeper (code review) | T2 | `/ama-review` |
-| `ama-board-a` | Board seat (Anthropic lens) | T3 | `/ama-board` |
-| `ama-board-b` | Board seat (OpenAI lens) | T3 | `/ama-board` |
-| `ama-board-c` | Board seat (OpenRouter lens) | T3 | `/ama-board` |
-
-Each profile has its own `SOUL.md` (identity) and loads the skills it needs via its bundle.
-
-## The skills
-
-| Skill | Purpose |
-|-------|---------|
-| `ama-planning` | Conduct progressive-disclosure planning interviews, produce PRD/spec/DAG/criteria |
-| `ama-build-task` | Implement a single task: write code + tests + why-comments, open draft PR |
-| `ama-review` | Review PRs for correctness, safety, and fit before merging to trunk |
-| `ama-board` | Multi-vendor scoring + "prove it or lose it" veto on flagged decisions |
-| `ama-github-workflow` | Deterministic GitHub operations: create/move issues, branches, PRs, merge |
-| `ama-session-handoff` | Checkpoint progress, hand off to next session, resume from latest checkpoint |
-| `ama-human-testing` | Generate per-phase test guides, boot isolated test envs, collect pass/fail via Telegram |
-| `ama-quota-guard` | Monitor rolling 5-hour vendor quotas, downgrade to free tier, auto-resume |
-
-Skills carry the *how* (shared procedures). Agent identity (the *who*) lives in profile `SOUL.md` files.
-
-## Configuration (tier/seat → your Hermes models)
-
-AMA reuses the models you already have in Hermes. You don't define provider keys or a model catalog here — you just choose which **existing Hermes model** plays each role:
-
-- **Tiers:** `T1` (cheap, high-volume), `T2` (real coding/review), `T3` (planning, hard calls).
-- **Board seats:** three seats — pick three *different* vendors where you can, for real cross-vendor diversity.
-
-`config/settings.yaml` records these roles (and optional fallback examples). The actual assignment happens at **setup**: `scripts/setup-ama-profiles.sh` asks which Hermes model to use for each tier/seat and writes it to the profile's `model.default`.
-
-To run setup non-interactively (e.g. an agent installing AMA on your behalf, after asking you), set these before running the script:
+Clone this repository locally and switch to the build branch that currently carries the latest AMA packaging work:
 
 ```bash
-export AMA_MODEL_T1=...      AMA_MODEL_T2=...      AMA_MODEL_T3=...
-export AMA_MODEL_SEAT_A=...  AMA_MODEL_SEAT_B=...  AMA_MODEL_SEAT_C=...
+git clone https://github.com/Wagner-Maximiliano/AMA-Autonomous_Multi-Agent_Framework.git
+cd AMA-Autonomous_Multi-Agent_Framework
+git checkout claude/autonomous-agent-framework-5MdEG
 ```
 
-To retune later, re-run the script or set a profile's model directly:
+Register the tap with Hermes:
 
 ```bash
-hermes -p ama-builder config set model.default <your-model>   # VERIFY exact syntax
+hermes skills tap add Wagner-Maximiliano/AMA-Autonomous_Multi-Agent_Framework
 ```
 
-No separate API keys or Telegram token are needed — providers, model auth, and the human channel all come from your Hermes configuration. (Optional `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` only if AMA must reach you with no active Hermes session.)
+Run the AMA profile setup:
 
-## Developing the AMA framework itself
+```bash
+bash scripts/setup-ama-profiles.sh
+```
 
-This section is for contributors who are **improving the AMA framework**, not for people using it to build projects. If you're using AMA to build a project, you can skip this section.
+That creates the dedicated AMA profiles and installs the AMA skills and bundles.
 
-Framework development happens on a dedicated build branch (never `main` or `master`) and is guided by:
+### 2. Bootstrap AMA into a project repo
 
-- **`docs/autonomous-agents/build/SESSION_PROTOCOL.md`** — the rules every build session must follow (so progress survives across sessions).
-- **`docs/autonomous-agents/build/BUILD_PLAN.md`** — detailed tasks, phases, and success criteria.
-- **`docs/autonomous-agents/build/STATE.md`** — live progress file; agents read "what's next" and write "what I did."
-- **`docs/adr/ADR-0002-distribution-as-hermes-tap-and-profiles.md`** — the decision record for this tap + bundles + profiles packaging model.
+New repository:
 
-When you want to contribute to AMA:
-1. Read the design in `docs/autonomous-agents/OVERVIEW.md` (plain English) and `docs/autonomous-agents/FRAMEWORK_SPEC.md` (full spec).
-2. Check `docs/autonomous-agents/build/BUILD_PLAN.md` for the next task to work on.
-3. Follow `docs/autonomous-agents/build/SESSION_PROTOCOL.md` so your work survives across sessions.
-4. Commit to the build branch, not `main`; the human promotes when ready.
+```bash
+bash /path/to/AMA-Autonomous_Multi-Agent_Framework/scripts/bootstrap-ama-project.sh /path/to/your-project new
+```
+
+Existing repository:
+
+```bash
+bash /path/to/AMA-Autonomous_Multi-Agent_Framework/scripts/bootstrap-ama-project.sh /path/to/your-project existing
+```
+
+This adds a small AMA support layer to the target repo:
+- `.ama/PROJECT_BRIEF.md`
+- `.ama/STATE.md`
+- `.ama/config.yaml`
+- `.github/ama-labels.json`
+- `.github/ISSUE_TEMPLATE/ama-task.yml`
+- `.github/PULL_REQUEST_TEMPLATE.md`
+
+It does not copy the AMA framework itself into the project.
+
+### 3. Create AMA labels in GitHub
+
+Use the GitHub helper against the target repository:
+
+```bash
+export GITHUB_TOKEN=your_token
+python3 scripts/bootstrap_github_labels.py --repo owner/repo
+```
+
+That creates or updates the AMA owner and tier labels used for routing.
+
+## Using AMA in a project
+
+1. Bootstrap the target repository.
+2. Fill in `.ama/PROJECT_BRIEF.md`.
+3. Review `.ama/config.yaml`.
+4. Apply the GitHub labels.
+5. Start planning:
+
+```bash
+hermes -p ama-planner /ama-plan
+```
+
+After the plan is approved, AMA can create GitHub issues in phase batches and start the branch-per-task workflow.
+
+## Files and scripts added in this repository
+
+Important operator assets:
+- `docs/autonomous-agents/INSTALLATION.md`
+- `docs/autonomous-agents/AMA_OPERATOR_RUNBOOK.md`
+- `docs/autonomous-agents/LABEL_ROUTING.md`
+- `scripts/bootstrap-ama-project.sh`
+- `scripts/bootstrap_ama_project.py`
+- `scripts/bootstrap_github_labels.py`
+- `templates/project-ama/`
+
+## Framework build status
+
+This repository is also the multi-session build repo for AMA itself.
+
+If you are contributing to the framework rather than using it in another project, start with:
+- `docs/autonomous-agents/build/SESSION_PROTOCOL.md`
+- `docs/autonomous-agents/build/BUILD_PLAN.md`
+- `docs/autonomous-agents/build/STATE.md`
+- `docs/autonomous-agents/FRAMEWORK_SPEC.md`
+- `docs/autonomous-agents/OVERVIEW.md`
 
 ## Design docs
 
-- **`docs/autonomous-agents/OVERVIEW.md`** — plain-English explanation of how the framework works (start here).
-- **`docs/autonomous-agents/FRAMEWORK_SPEC.md`** — full technical specification (all details, all trade-offs).
+- `docs/autonomous-agents/OVERVIEW.md` — plain-English explanation
+- `docs/autonomous-agents/FRAMEWORK_SPEC.md` — detailed technical specification
+- `docs/autonomous-agents/INSTALLATION.md` — install and bootstrap guide
+- `docs/autonomous-agents/AMA_OPERATOR_RUNBOOK.md` — operator guide for real projects
+- `docs/autonomous-agents/LABEL_ROUTING.md` — label routing contract
 
-## Status
+## Current status
 
-**V1 packaging scaffold in place:**
-- Tap + skills + profiles + bundles structure (ADR-0002).
-- 8 skills with progressive-disclosure bodies.
-- 6 dedicated AMA profiles with starter `SOUL.md` files.
-- Config tier→model routing.
-- Setup script and project-brief template.
-
-**Still to come (see `docs/autonomous-agents/build/BUILD_PLAN.md`):**
-- Custom core/ engine (gateway, state store, orchestrator, board, watchdog, quality checks, human/Telegram).
-- End-to-end V1 pilot on a tiny real project (idea → plan sign-off → build → testing → go-live).
+Packaging and project-bootstrap scaffolding are in place.
+The remaining build work continues in the custom `core/` engine and validation tasks described in `docs/autonomous-agents/build/BUILD_PLAN.md`.

@@ -1,0 +1,52 @@
+[
+  {
+    "name": "ama:owner:orchestrator",
+    "color": "1D76DB",
+    "description": "Routing, planning, backlog, dependency, or automation work"
+  },
+  {
+    "name": "ama:owner:builder",
+    "color": "0E8A16",
+    "description": "Implementation task owned by the builder"
+  },
+  {
+    "name": "ama:owner:reviewer",
+    "color": "5319E7",
+    "description": "Formal review and merge gate"
+  },
+  {
+    "name": "ama:owner:inverted-reviewer",
+    "color": "B60205",
+    "description": "Adversarial check against acceptance criteria"
+  },
+  {
+    "name": "ama:owner:board",
+    "color": "D93F0B",
+    "description": "High-impact decision routed to the board"
+  },
+  {
+    "name": "ama:owner:human",
+    "color": "FBCA04",
+    "description": "Human action or approval required"
+  },
+  {
+    "name": "ama:tier:t1",
+    "color": "C5DEF5",
+    "description": "Cheap or fast reasoning lane"
+  },
+  {
+    "name": "ama:tier:t2",
+    "color": "BFDADC",
+    "description": "Standard implementation and review lane"
+  },
+  {
+    "name": "ama:tier:t3",
+    "color": "F9D0C4",
+    "description": "Frontier reasoning lane"
+  },
+  {
+    "name": "ama:tier:board",
+    "color": "E99695",
+    "description": "Reserved for board decisions"
+  }
+]

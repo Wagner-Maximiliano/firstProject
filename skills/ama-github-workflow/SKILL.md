@@ -25,7 +25,10 @@ Ensures all work flows through branches, Kanban, and code review with CI gatesâ€
 ### Starting a task
 
 1. **Confirm you are NOT on `main`/`master`.** Run `git branch` and verify you are on the project's designated **integration/build branch** (named in the project's `PROJECT_BRIEF.md` or `STATE.md`), never the trunk.
-2. **Create a GitHub Issue** (if not already done) in the repository with title `[Task] <short description>`. Assign labels: `stream:<name>`, `tier:<T0|T1|T2|T3>`, `risk:<LOW|MID|HIGH>`, `complexity:<score>`. Add the issue to the Kanban board in **Backlog**.
+2. **Create a GitHub Issue** (if not already done) in the repository. AMA-managed issues should carry exactly one owner label and one tier label:
+   - owner: `ama:owner:orchestrator|builder|reviewer|inverted-reviewer|board|human`
+   - tier: `ama:tier:t1|t2|t3|board`
+   Optional dependency and scope notes should be captured in the issue body so overlap detection can reason about parallel work.
 3. **Create a local branch** from the build branch:
    ```bash
    git pull origin <build-branch>
@@ -85,7 +88,7 @@ Ensures all work flows through branches, Kanban, and code review with CI gatesâ€
 If the PR touches architecture, security, schema, dependencies, or irreversible changes (Â§7.1 in FRAMEWORK_SPEC.md):
 
 1. **Do not merge yet.** The Approval Board must convene.
-2. **Tag the PR** with `risk:HIGH` or `needs-board-review`.
+2. **Tag the PR or linked issue** with the appropriate owner/tier labels and any repo-specific risk marker your project uses.
 3. **Wait for Board review.** The 3-vendor panel votes. Proceed only if the vote clears thresholds (Â§7.4).
 4. **Incorporate any conditions** from the Board into a follow-up commit.
 
@@ -125,7 +128,7 @@ git push --force-with-lease origin task/<issue-#>-<slug>
 
 **Board-flagged PR merged without Board approval:** A Board decision blocks merge until thresholds clear. Do not bypass.
 
-**Forgotten label:** Labels encode stream, tier, risk, and complexity for routing and status. If you forget them, the orchestrator cannot schedule or escalate correctlyâ€”add them immediately.
+**Forgotten or conflicting labels:** Labels are routing signals, not decoration. Every AMA-managed issue needs exactly one `ama:owner:*` label and one `ama:tier:*` label. If those are missing or conflicting, the orchestrator should repair the obvious default or block the issue rather than guessing.
 
 ## Verification
 

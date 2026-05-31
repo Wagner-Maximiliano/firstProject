@@ -40,11 +40,15 @@ Everything depends on a great plan, so that's where your time goes — and we ma
 ### They work in parallel, like a real crew
 Different parts of your project are built at the same time by different builders, each in their own workspace so they never trip over each other. The Site Manager figures out what can happen now and what has to wait for something else to finish first.
 
+In an existing project, AMA does not take over everything at once. It only manages the GitHub issues that carry AMA labels, so you can adopt it safely without disturbing the rest of the repo. Parallel work is allowed when the dependency rules and overlap checks say it is safe; if two tasks are likely to touch the same area, AMA delays one instead of creating merge chaos on purpose.
+
 ### Nothing risky happens to the "real" version
 There's always one clean, working copy of your project that's protected. Builders work on *copies*. A change only joins the real version after it's been tested, inspected, and (if it's a big deal) approved by the Board. It's mechanically impossible for a worker to mess up the master copy — the rules are enforced by the system, not by trust.
 
 ### Everything is tracked on a visible board
 Just like sticky notes on a wall: **To Do → Doing → In Review → Done.** Every task is a card, and the cards move automatically. You (or anyone) can glance at it any time and see exactly where things stand.
+
+In practice, AMA uses **GitHub issues as the task system**. Each AMA-managed issue carries simple labels that say who should act next (builder, reviewer, board, or human) and which capability lane it belongs to (cheap/fast, standard coding, frontier, or board-only). That makes routing visible to both humans and agents instead of hiding it inside a chat.
 
 ### Big decisions go to a "board of experts" from different companies
 For the important, hard-to-undo choices, we don't trust a single AI. We ask **three AIs from three different companies** (e.g. Anthropic, OpenAI, and a third) to weigh in — different companies' AIs have different blind spots, so a mixed panel catches mistakes a single one would miss.

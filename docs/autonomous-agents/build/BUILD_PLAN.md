@@ -227,6 +227,8 @@ The packaging scaffold is in place:
 - **Config** (`config/settings.yaml`) — tier→model mapping (T1/T2/T3 + board seats A/B/C across 3 vendors).
 - **Setup script** (`scripts/setup-ama-profiles.sh`) — creates profiles, installs skills/bundles, sets model tiers.
 - **Project brief template** (`templates/PROJECT_BRIEF.md`) — one-time input for each new project.
+- **Project bootstrap package** (`templates/project-ama/`, `scripts/bootstrap-ama-project.sh`, `scripts/bootstrap_ama_project.py`, `scripts/bootstrap_github_labels.py`) — lightweight adoption for new or existing repos, including `.ama/` files, GitHub templates, and AMA label creation.
+- **Operator docs** (`docs/autonomous-agents/INSTALLATION.md`, `AMA_OPERATOR_RUNBOOK.md`, `LABEL_ROUTING.md`) — installation, adoption, and routing guidance.
 
 ### Remaining packaging tasks
 

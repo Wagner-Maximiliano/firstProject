@@ -6,10 +6,10 @@
 
 ## CURRENT STATUS
 
-- **Phase:** Packaging scaffold complete (ADR-0002) → next is B0-1 reconciliation + PKG verification
-- **Active task:** _none in progress — packaging scaffold just shipped_
-- **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, AND the new tap: `skills/`, `profiles/`, `skill-bundles/`, `config/`, `scripts/`, `templates/`; build here, keep `master` untouched)_
-- **Build health:** _no `core/` code or tests yet; the tap (skills/bundles/profiles) is authored but NOT yet tested against a real Hermes install_
+- **Phase:** Packaging scaffold complete (ADR-0002) + operator/bootstrap layer added (ADR-0003) → next is B0-1 reconciliation + PKG verification
+- **Active task:** _none in progress — packaging/operator docs and bootstrap helpers just shipped_
+- **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, tap scaffold, and project bootstrap assets; build here, keep `master` untouched)_
+- **Build health:** _no `core/` code or tests yet; packaging assets are authored and the project bootstrap helpers were syntax-checked and dry-run locally against a throwaway git repo; real Hermes install verification is still pending_
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
 ---
@@ -67,6 +67,14 @@ Concretely:
 
 ## LAST SESSION SUMMARY
 
+### Handoff — 2026-05-31 — operator/bootstrap packaging pass
+- DONE this session: Implemented the missing "use AMA in a real repo" layer the human asked for. Added `docs/autonomous-agents/INSTALLATION.md`, `AMA_OPERATOR_RUNBOOK.md`, and `LABEL_ROUTING.md`; added ADR-0003 for the project-adoption/routing contract; rewrote `README.md` around install + bootstrap; updated `OVERVIEW.md`, `FRAMEWORK_SPEC.md`, `BUILD_PLAN.md`, `skills/ama-github-workflow/SKILL.md`, and `scripts/setup-ama-profiles.sh` to reflect GitHub-native routing and project onboarding.
+- DONE this session (artifacts): Added a lightweight project bootstrap package under `templates/project-ama/` (`.ama/PROJECT_BRIEF.md`, `.ama/STATE.md`, `.ama/config.yaml`, `.github/ama-labels.json`, issue template, PR template) plus helper scripts `scripts/bootstrap-ama-project.sh`, `scripts/bootstrap_ama_project.py`, and `scripts/bootstrap_github_labels.py`.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; local commit `3ccda8e` (`feat: add project bootstrap and github routing package`) contains the operator/bootstrap work; no `core/` code yet; bootstrap helpers verified by `python3 -m py_compile`, `bash -n`, `python3 scripts/bootstrap_github_labels.py --help`, and a local throwaway-git-repo dry-run of `bootstrap_ama_project.py`. Real Hermes CLI verification and live GitHub API label creation are still pending.
+- LEARNED / GOTCHAS: (1) The operator package and the framework-build package must stay distinct in the docs or the human gets understandably confused. (2) Existing-repo adoption needs a safe boundary: AMA-labeled issues only. (3) The current bootstrap layer is parallel-ready at the contract level, but the full autonomous parallel engine still depends on later `core/` work; don't oversell that before B1/Beyond-V1 implementation catches up.
+- NEXT: start with task B0-1 — write `docs/adr/ADR-0001-hermes-integration.md`, reconcile `core/` vs Hermes-native responsibilities, then if a real Hermes install is available do PKG-1/PKG-2 verification of the setup script and install flow.
+- BLOCKERS / WAITING ON HUMAN: none for the doc/bootstrap work just landed; real Hermes install and a GitHub token/repo are still needed to fully verify PKG-1/PKG-2 and live label creation.
+
 ### Handoff — 2026-05-27 — model-reuse design change
 - DONE: Reworked model routing to **reuse the human's existing Hermes models** instead of hardcoding IDs (human-directed). `config/settings.yaml` now records tier/seat *roles* only. `scripts/setup-ama-profiles.sh` gained `gather_models()` — it lists Hermes models (best-effort, `# VERIFY`) and picks each tier/seat model from `AMA_MODEL_*` env vars → interactive prompt → commented fallback (latest Claude IDs). Removed the per-AMA API-key requirement from README + script ("next steps"). README Prerequisites + Configuration rewritten around "AMA reuses your Hermes setup". `bash -n` passes.
 - DECISIONS captured (see Resolved): reuse Hermes models + ask-at-setup; board seat C chosen at setup (pick 3 distinct vendors); pilot deferred to B1-1.
@@ -85,6 +93,7 @@ Concretely:
 ## DECISIONS LOG (ADR index)
 
 - **ADR-0002** (2026-05-26) — Distribute the framework as a **Hermes tap + dedicated profiles**. Repo becomes a tap (`skills/`), installed via `hermes skills tap add`. ~8 focused skills carry the *how*; new dedicated AMA profiles (`ama-planner/builder/reviewer/board-a/b/c`) carry the *who* in their own `SOUL.md` — the human's existing profiles are never touched. Keep the custom `core/` engine; reconcile its overlap with Hermes-native features in ADR-0001. Projects stay clean: a per-project `PROJECT_BRIEF.md` + kickoff prompt, framework lives globally in `~/.hermes`. (ADR-0001 = Hermes-integration, still to be written in B0-1.)
+- **ADR-0003** (2026-05-31) — Adopt AMA into target projects through a **lightweight project-local bootstrap + GitHub-native routing contract**. New/existing repos get `.ama/` state/brief/config files, GitHub templates, and AMA owner/tier labels; AMA manages only AMA-labeled issues, uses one implementation issue = one branch = one PR, releases tasks in phase batches, and stays parallel-ready with overlap-aware scheduling rules.
 
 ---
 
@@ -92,9 +101,12 @@ Concretely:
 
 - [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Still confirm in B0-1 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
 - [ ] **`core/` vs Hermes-native overlap** must be settled in B0-1/ADR-0001 before building B0-4 (gateway) and B0-5 (state): prefer Hermes-native routing/sessions/compression; build custom only for real gaps (quota guard, board orchestration, GUI-test flow). **Telegram is part of this:** confirm whether background/proactive messages (e.g. the watchdog with no active session) can go through Hermes' channel or need a direct path.
+- [ ] Push/auth blocker in this environment: local commit `3ccda8e` is ready, but `git push` failed against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
 
 ### Resolved
 - **Portability** (was open): the framework is NOT copied into projects. It's a **Hermes tap** installed once per machine; each project carries only a small `PROJECT_BRIEF.md` + `STATE.md`. See ADR-0002.
+- **Project adoption model** (2026-05-31): AMA installs into a target repo through a lightweight bootstrap package (`templates/project-ama/` + helper scripts), not by copying the whole framework. Existing repos are adopted conservatively: AMA manages only AMA-labeled issues. See ADR-0003.
+- **GitHub routing contract** (2026-05-31): AMA-managed issues use exactly one `ama:owner:*` label and one `ama:tier:*` label; implementation flow is one issue = one branch = one PR, with phase-batched issue creation and overlap-aware parallel routing. See ADR-0003 + `docs/autonomous-agents/LABEL_ROUTING.md`.
 - **Name confirmed: "AMA".** (An optional GitHub repo rename stays a human settings action; if you rename, update the `AMA_TAP_REPO` value / your `hermes skills tap add` argument to match.)
 - **Human channel = Hermes' existing Telegram** (human confirmed it's configured & connected): AMA reuses it, so no separate AMA bot/token is needed for normal interactive use. Only out-of-band messaging needs the B0-1 check above.
 - **Model routing reuses Hermes' existing models** (2026-05-27, human-directed): AMA does **not** hardcode model IDs or carry its own provider keys. `config/settings.yaml` records only the *role* of each tier (T1/T2/T3) and board seat; the **setup script asks the human which existing Hermes model to assign** to each role (interactive prompt, or `AMA_MODEL_*` env vars so an installing agent can pass the human's choices non-interactively). Latest-Claude IDs (Opus 4.7 / Sonnet 4.6 / Haiku 4.5) are kept only as commented fallback examples.

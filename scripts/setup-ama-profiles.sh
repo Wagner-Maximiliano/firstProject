@@ -6,7 +6,7 @@
 # bundles into each. It NEVER modifies or touches your existing personal profiles.
 #
 # Before running, set the AMA tap repo (your fork of the framework):
-#   export AMA_TAP_REPO="wagner-maximiliano/firstProject"
+#   export AMA_TAP_REPO="Wagner-Maximiliano/AMA-Autonomous_Multi-Agent_Framework"
 # Or let it default to that.
 #
 # Run:
@@ -24,7 +24,7 @@ cd "$(dirname "$0")/.."
 
 # Hermes tap repo (where the framework skills and bundles live).
 # Override by setting AMA_TAP_REPO in the environment.
-TAP_REPO="${AMA_TAP_REPO:-wagner-maximiliano/firstProject}"
+TAP_REPO="${AMA_TAP_REPO:-Wagner-Maximiliano/AMA-Autonomous_Multi-Agent_Framework}"
 
 # Profile definitions: name, description, model tier (from config/settings.yaml)
 declare -A PROFILES=(
@@ -233,6 +233,8 @@ log "Next steps:"
 log "  1. Verify Hermes CLI commands match your version: hermes --help, hermes profile --help, hermes skills --help"
 log "  2. For each profile, verify model config: hermes -p <profile-name> config show"
 log "  3. No API keys to set here - AMA reuses the providers/keys already in your Hermes config."
-log "  4. Kick off a build session with the Planner:"
+log "  4. Bootstrap a target project repo (new or existing) with:"
+log "     bash /path/to/AMA-Autonomous_Multi-Agent_Framework/scripts/bootstrap-ama-project.sh /path/to/project existing"
+log "  5. Then start planning with the AMA planner:"
 log "     hermes -p ama-planner /ama-plan"
 log ""

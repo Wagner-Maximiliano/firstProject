@@ -291,7 +291,6 @@ draft PR opened (Builder)
 - Stale-PR sweeper (T0, see §11) nudges or reassigns PRs idle past a threshold.
 
 ### 8.4 Kanban (GitHub Projects v2)
-
 Board columns and the automation that moves cards (all **scripted**, no model needed):
 
 | Column | Enter when | Exit when |
@@ -303,7 +302,10 @@ Board columns and the automation that moves cards (all **scripted**, no model ne
 | **Blocked** | Dep missing / failing / awaiting Board | Unblocked |
 | **Done** | Merged to `main` | — |
 
-- Every task = one GitHub Issue. Labels encode `stream:*`, `tier:*`, `risk:*`, `complexity:*`.
+- Every task = one GitHub Issue.
+- AMA-managed issues carry exactly **one owner label** (`ama:owner:orchestrator|builder|reviewer|inverted-reviewer|board|human`) and **one tier label** (`ama:tier:t1|t2|t3|board`).
+- Existing repositories are adopted conservatively: AMA only manages issues that carry AMA labels; all other issues remain untouched.
+- Labels are part of the routing contract, not decoration: they tell the orchestrator who should act next and which capability lane to use.
 - WIP limits per column prevent the system from fanning out beyond budget/parallelism caps.
 
 ---
