@@ -120,7 +120,7 @@ Concretely next:
 
 - [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Still confirm in B0-1 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
 - [ ] PKG-3 execution remains: run the framework-vs-project dry-run on a throwaway repo (`PROJECT_BRIEF.md` + planner invocation + clean project-tree verification).
-- [ ] Push/auth blocker in this environment: local commits are ready (latest `4e3353b` includes B0-1/ADR-0001), but `git push` fails against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
+- [ ] Push/auth blocker in this environment: local commits are ready (latest `cb97af5` includes PKG-1/PKG-2 reconciliation), but `git push` fails against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
 
 ### Resolved
 - **B0-1 complete (2026-05-31):** ADR-0001 finalized the Hermes integration boundary: defer runtime routing/sessions/compression concerns to Hermes; keep AMA custom for quota guard, board orchestration protocol, GUI-test flow, orchestrator/state/quality policies.
