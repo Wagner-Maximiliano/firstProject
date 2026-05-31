@@ -141,7 +141,7 @@ Concretely next:
 ## OPEN QUESTIONS / BLOCKERS
 
 - [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Confirm in B0-4 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
-- [ ] GitHub remote verification blocker in this environment: `gh` CLI is not installed (`gh: command not found`), and prior `git push` attempts in this session family also lacked GitHub credentials over HTTPS. Until auth/tooling is available, branch-protection + throwaway-PR verification remains pending.
+- [ ] GitHub remote verification blocker in this environment: `gh` CLI is not installed (`gh: command not found`). Until `gh` is available and authenticated, branch-protection + throwaway-PR verification remains pending.
 
 ### Resolved
 - **B0-1 complete (2026-05-31):** ADR-0001 finalized the Hermes integration boundary: defer runtime routing/sessions/compression concerns to Hermes; keep AMA custom for quota guard, board orchestration protocol, GUI-test flow, orchestrator/state/quality policies.
