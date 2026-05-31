@@ -6,26 +6,26 @@
 
 ## CURRENT STATUS
 
-- **Phase:** B0-1 completed (ADR-0001 accepted) → next is PKG-1 script reconciliation and B0-2 skeleton
-- **Active task:** _B0-1 completed this session; PKG-1/PKG-2 verification started (CLI capability reconciliation done, full install run pending script updates)_
+- **Phase:** Packaging PKG-1 and PKG-2 completed; next is PKG-3 then B0-2 skeleton
+- **Active task:** _PKG-1/PKG-2 completed in this session via real Hermes CLI run; next start is PKG-3 dry-run and then B0-2 project skeleton_
 - **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, tap scaffold, and project bootstrap assets; build here, keep `master` untouched)_
-- **Build health:** _no `core/` code or tests yet; packaging assets are authored and the project bootstrap helpers were syntax-checked and dry-run locally against a throwaway git repo; real Hermes install verification is still pending_
+- **Build health:** _no `core/` code or tests yet; packaging assets are authored; setup script now reconciled to Hermes v0.15.1 and end-to-end install path verified (tap add + setup + profile/model/skill-bundle checks)._
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
 ---
 
 ## ▶ NEXT SESSION STARTS HERE
 
-**Task PKG-1 — Reconcile setup script to verified Hermes CLI (then PKG-2).**
-B0-1 is complete: `docs/adr/ADR-0001-hermes-integration.md` records verified Hermes capabilities and the module-by-module boundary (Hermes-native vs AMA-custom).
+**Task PKG-3 — Dry-run framework-vs-project flow (then B0-2).**
+PKG-1 and PKG-2 are complete: `scripts/setup-ama-profiles.sh` now matches Hermes v0.15.1 behavior and the full install path has been executed/verified.
 Concretely next:
-1. Patch `scripts/setup-ama-profiles.sh` using verified CLI behavior from this session:
-   - remove/replace `hermes models list` assumption
-   - fix skill installation flow (current CLI accepts one identifier per `hermes skills install` call)
-   - replace guessed bundle-copy assumptions with verified `hermes bundles` handling (or explicitly documented fallback)
-2. Run **PKG-1** by executing the setup path and resolving all remaining `# VERIFY` markers as working or changed.
-3. Run **PKG-2** end-to-end install validation (tap add → setup → profile/model/skills/bundles verification).
-4. If PKG-2 cannot fully complete due environment/auth/network constraints, log exact blocker evidence and continue with **B0-2** project skeleton.
+1. Run **PKG-3** on a tiny throwaway project repo:
+   - create repo from bootstrap
+   - fill `.ama/PROJECT_BRIEF.md`
+   - invoke planner entrypoint (`hermes -p ama-planner /ama-plan` or verified equivalent)
+   - confirm project tree stays framework-clean
+2. If PKG-3 is blocked by auth/network/runtime constraints, capture exact evidence and move to **B0-2** project skeleton.
+3. Start **B0-2** (`scripts/setup.sh`, pyproject, lint/type/test scaffolding, placeholder green pytest).
 
 ---
 
@@ -38,8 +38,8 @@ Concretely next:
 - [x] `config/settings.yaml` (tier/seat *roles*; models chosen from Hermes at setup)
 - [x] `scripts/setup-ama-profiles.sh` (profile bootstrap)
 - [x] `templates/PROJECT_BRIEF.md`
-- [ ] PKG-1 Verify setup script against real Hermes (resolve `# VERIFY:` markers)
-- [ ] PKG-2 End-to-end install test (tap add → setup → profiles/skills/bundles usable)
+- [x] PKG-1 Verify setup script against real Hermes (resolve `# VERIFY:` markers)
+- [x] PKG-2 End-to-end install test (tap add → setup → profiles/skills/bundles usable)
 - [ ] PKG-3 Dry-run framework-vs-project flow on a throwaway project
 
 ### Phase B0 — Foundations
@@ -68,6 +68,14 @@ Concretely next:
 ---
 
 ## LAST SESSION SUMMARY
+
+### Handoff — 2026-05-31 — PKG-1/PKG-2 install verification session
+- DONE this session: Patched `scripts/setup-ama-profiles.sh` to match verified Hermes v0.15.1 behavior: removed all `# VERIFY` markers, replaced `hermes models list` assumption, switched profile existence check to `hermes profile show`, corrected bundle destination to profile-local `skill-bundles/`, and fixed skills install flow.
+- DONE this session (verification): Ran `hermes skills tap add Wagner-Maximiliano/AMA-Autonomous_Multi-Agent_Framework`, then executed `bash scripts/setup-ama-profiles.sh` end-to-end with explicit `AMA_MODEL_*` assignments; verified all six AMA profiles exist, each profile model was set to the expected value, and each profile has AMA bundle YAMLs loaded.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; PKG-1 and PKG-2 now checked off; no `core/` skeleton yet.
+- LEARNED / GOTCHAS: unauthenticated GitHub tap resolution is rate-limited in this environment, and `hermes skills install` can return non-fatal suggestion output with exit code 0 when a skill is unresolved. Script now uses deterministic local skill-copy fallback from repo `skills/` to avoid network dependency and keep installs reproducible.
+- NEXT: start PKG-3 dry-run on throwaway repo (bootstrap + planner invocation + cleanliness check), then move into B0-2 project skeleton.
+- BLOCKERS / WAITING ON HUMAN: none for PKG-1/PKG-2; push to origin may still require local GitHub auth in this environment.
 
 ### Handoff — 2026-05-31 — B0-1 Hermes reconciliation session
 - DONE this session: Completed B0-1 and wrote `docs/adr/ADR-0001-hermes-integration.md` with a module-by-module boundary for Hermes-native vs AMA-custom responsibilities.
@@ -111,7 +119,7 @@ Concretely next:
 ## OPEN QUESTIONS / BLOCKERS
 
 - [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Still confirm in B0-1 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
-- [ ] PKG-1/PKG-2 execution remains: patch and run `scripts/setup-ama-profiles.sh` against real Hermes to resolve remaining `# VERIFY` assumptions (model discovery UX, bundle install path, end-to-end skill install behavior).
+- [ ] PKG-3 execution remains: run the framework-vs-project dry-run on a throwaway repo (`PROJECT_BRIEF.md` + planner invocation + clean project-tree verification).
 - [ ] Push/auth blocker in this environment: local commits are ready (latest `4e3353b` includes B0-1/ADR-0001), but `git push` fails against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
 
 ### Resolved

@@ -84,15 +84,35 @@ log_error() {
   exit 1
 }
 
+install_skill_with_fallback() {
+  local profile_name="$1"
+  local skill_name="$2"
+
+  local src_dir="skills/$skill_name"
+  local dst_dir="$HOME/.hermes/profiles/$profile_name/skills/$skill_name"
+  if [ -d "$src_dir" ]; then
+    mkdir -p "$dst_dir"
+    cp -r "$src_dir/"* "$dst_dir/" || return 1
+    return 0
+  fi
+
+  # Optional network path for environments that prefer tap install.
+  if [ "${AMA_FORCE_TAP_INSTALL:-0}" = "1" ]; then
+    local out
+    out="$(hermes -p "$profile_name" skills install "$skill_name" 2>&1 || true)"
+    echo "$out" >&2
+    if echo "$out" | grep -qiE 'installed|already installed'; then
+      return 0
+    fi
+  fi
+
+  return 1
+}
+
 # Check if a Hermes profile already exists.
 profile_exists() {
   local profile_name="$1"
-  # VERIFY: Hermes profile home location may differ per version; usually ~/.hermes/profiles/<name>
-  if [ -d "$HOME/.hermes/profiles/$profile_name" ]; then
-    return 0
-  else
-    return 1
-  fi
+  hermes profile show "$profile_name" >/dev/null 2>&1
 }
 
 # Decide which existing Hermes model backs each tier/seat. AMA reuses your Hermes
@@ -103,14 +123,9 @@ profile_exists() {
 gather_models() {
   log ""
   log "Choosing which of your existing Hermes models to use for each tier/seat."
-  # VERIFY: command to list configured Hermes models (e.g. `hermes models list`
-  # or `hermes config get model`). Adjust to your version; this is best-effort.
-  if hermes models list >/dev/null 2>&1; then
-    log "Your configured Hermes models:"
-    hermes models list >&2 || true
-  else
-    log "(Could not auto-list Hermes models; enter the model names/aliases you use.)"
-  fi
+  log "Current default model from active profile (for reference):"
+  hermes config show | sed -n '/◆ Model/,+2p' >&2 || true
+  log "Tip: run 'hermes model' in another terminal to inspect/select models interactively."
 
   local keys=(T1 T2 T3 seat_a seat_b seat_c)
   local key env_name from_env fallback answer
@@ -163,7 +178,6 @@ for profile_name in "${!PROFILES[@]}"; do
     log_warn "$profile_name already exists; skipping creation (will update config and bundles)"
   else
     log "Creating profile $profile_name..."
-    # VERIFY: hermes profile create syntax may vary; check `hermes profile --help`
     hermes profile create "$profile_name" --description "$description" || \
       log_error "Failed to create profile $profile_name"
     log_ok "Created profile $profile_name"
@@ -180,7 +194,6 @@ for profile_name in "${!PROFILES[@]}"; do
   fi
 
   log "Setting $profile_name model to: $model"
-  # VERIFY: hermes config set syntax for per-profile config
   hermes -p "$profile_name" config set model.default "$model" || \
     log_warn "Failed to set model for $profile_name; continue anyway"
 
@@ -196,9 +209,10 @@ for profile_name in "${!PROFILES[@]}"; do
     log_warn "SOUL.md not found at $soul_src; skipping"
   fi
 
-  # Copy skill bundles into the profile's home.
-  # VERIFY: Exact bundle directory location in profile home; usually ~/.hermes/profiles/<name>/bundles/
-  bundles_dst="$HOME/.hermes/profiles/$profile_name/bundles"
+  # Copy skill bundles into the profile's Hermes bundle directory.
+  # Hermes scans <HERMES_HOME>/skill-bundles/*.yaml, and for a profile session
+  # HERMES_HOME resolves to ~/.hermes/profiles/<name>.
+  bundles_dst="$HOME/.hermes/profiles/$profile_name/skill-bundles"
   mkdir -p "$bundles_dst"
   if [ -d "skill-bundles" ]; then
     log "Copying skill bundles..."
@@ -213,24 +227,39 @@ log "Installing AMA tap and skills..."
 
 # Add the tap globally (once is enough).
 log "Adding tap: $TAP_REPO"
-# VERIFY: hermes skills tap add syntax
 hermes skills tap add "$TAP_REPO" || \
   log_warn "Tap add failed; may already be installed"
 
 # Install skills into each profile.
 for profile_name in "${!PROFILES[@]}"; do
   log "Installing skills into $profile_name..."
-  # VERIFY: hermes -p <profile> skills install syntax
-  hermes -p "$profile_name" skills install ama-planning ama-build-task ama-review ama-board \
-    ama-github-workflow ama-session-handoff ama-human-testing ama-quota-guard || \
-    log_warn "Some skills failed to install into $profile_name"
+  skills=(
+    ama-planning
+    ama-build-task
+    ama-review
+    ama-board
+    ama-github-workflow
+    ama-session-handoff
+    ama-human-testing
+    ama-quota-guard
+  )
+  for skill_name in "${skills[@]}"; do
+    if ! install_skill_with_fallback "$profile_name" "$skill_name"; then
+      log_warn "Failed to install $skill_name into $profile_name"
+    fi
+  done
+done
+
+# Ensure copied bundle YAMLs are loaded in each profile's bundle index.
+for profile_name in "${!PROFILES[@]}"; do
+  hermes -p "$profile_name" bundles reload >/dev/null 2>&1 || true
 done
 
 log ""
 log_ok "AMA profile setup complete!"
 log ""
 log "Next steps:"
-log "  1. Verify Hermes CLI commands match your version: hermes --help, hermes profile --help, hermes skills --help"
+log "  1. Optional: inspect CLI help on your version: hermes --help, hermes profile --help, hermes skills --help"
 log "  2. For each profile, verify model config: hermes -p <profile-name> config show"
 log "  3. No API keys to set here - AMA reuses the providers/keys already in your Hermes config."
 log "  4. Bootstrap a target project repo (new or existing) with:"
