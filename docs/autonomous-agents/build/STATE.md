@@ -6,8 +6,8 @@
 
 ## CURRENT STATUS
 
-- **Phase:** Packaging PKG-1 and PKG-2 completed; next is PKG-3 then B0-2 skeleton
-- **Active task:** _PKG-1/PKG-2 completed in this session via real Hermes CLI run; next start is PKG-3 dry-run and then B0-2 project skeleton_
+- **Phase:** Packaging PKG-1/PKG-2/PKG-3 completed; next is B0-2 skeleton
+- **Active task:** _PKG-3 completed in this session via throwaway-repo dry-run; next start is B0-2 project skeleton_
 - **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, tap scaffold, and project bootstrap assets; build here, keep `master` untouched)_
 - **Build health:** _no `core/` code or tests yet; packaging assets are authored; setup script now reconciled to Hermes v0.15.1 and end-to-end install path verified (tap add + setup + profile/model/skill-bundle checks)._
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
@@ -16,16 +16,17 @@
 
 ## ▶ NEXT SESSION STARTS HERE
 
-**Task PKG-3 — Dry-run framework-vs-project flow (then B0-2).**
-PKG-1 and PKG-2 are complete: `scripts/setup-ama-profiles.sh` now matches Hermes v0.15.1 behavior and the full install path has been executed/verified.
+**Task B0-2 — Project skeleton.**
+PKG-1, PKG-2, and PKG-3 are complete.
 Concretely next:
-1. Run **PKG-3** on a tiny throwaway project repo:
-   - create repo from bootstrap
-   - fill `.ama/PROJECT_BRIEF.md`
-   - invoke planner entrypoint (`hermes -p ama-planner /ama-plan` or verified equivalent)
-   - confirm project tree stays framework-clean
-2. If PKG-3 is blocked by auth/network/runtime constraints, capture exact evidence and move to **B0-2** project skeleton.
-3. Start **B0-2** (`scripts/setup.sh`, pyproject, lint/type/test scaffolding, placeholder green pytest).
+1. Create B0-2 skeleton artifacts:
+   - `scripts/setup.sh`
+   - `pyproject.toml`
+   - ruff/black/mypy configuration
+   - starter `core/` package layout
+   - starter `tests/` with placeholder passing test
+2. Ensure local bootstrap path works from clean state (`scripts/setup.sh` then `pytest`).
+3. Commit B0-2 increment and update STATE with exact run commands and gotchas.
 
 ---
 
@@ -40,7 +41,7 @@ Concretely next:
 - [x] `templates/PROJECT_BRIEF.md`
 - [x] PKG-1 Verify setup script against real Hermes (resolve `# VERIFY:` markers)
 - [x] PKG-2 End-to-end install test (tap add → setup → profiles/skills/bundles usable)
-- [ ] PKG-3 Dry-run framework-vs-project flow on a throwaway project
+- [x] PKG-3 Dry-run framework-vs-project flow on a throwaway project
 
 ### Phase B0 — Foundations
 - [x] B0-1 Verify Hermes & reconcile design (ADR-0001)
@@ -68,6 +69,14 @@ Concretely next:
 ---
 
 ## LAST SESSION SUMMARY
+
+### Handoff — 2026-05-31 — PKG-3 dry-run verification session
+- DONE this session: Executed PKG-3 on throwaway repo `/tmp/ama-pkg3-throwaway-20260531-195024` with `python3 scripts/bootstrap_ama_project.py --repo <path> --mode existing`; verified expected bootstrap files were created under `.ama/` and `.github/` and project tree remained framework-light (no framework code copied in).
+- DONE this session (brief/planner): Filled `.ama/PROJECT_BRIEF.md` with a tiny pilot spec; verified planner invocation with current Hermes CLI using profile env (`HERMES_PROFILE=ama-planner hermes chat -q ... -Q`). Confirmed `/ama-plan` activates and can read/summarize `.ama/PROJECT_BRIEF.md` before questioning when explicitly instructed.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; PKG-3 checked off; next task is B0-2 project skeleton.
+- LEARNED / GOTCHAS: Current Hermes v0.15.1 CLI in this environment does not support `hermes -p <profile> /ama-plan` shape directly; verified equivalent is profile-scoped `hermes chat` invocation (e.g. `HERMES_PROFILE=ama-planner hermes chat -q "/ama-plan ..." -Q`).
+- NEXT: start B0-2 by creating `scripts/setup.sh`, `pyproject.toml`, lint/type/test config, starter `core/` package, and a green placeholder pytest path.
+- BLOCKERS / WAITING ON HUMAN: none for PKG-3; push/auth blocker remains for origin.
 
 ### Handoff — 2026-05-31 — PKG-1/PKG-2 install verification session
 - DONE this session: Patched `scripts/setup-ama-profiles.sh` to match verified Hermes v0.15.1 behavior: removed all `# VERIFY` markers, replaced `hermes models list` assumption, switched profile existence check to `hermes profile show`, corrected bundle destination to profile-local `skill-bundles/`, and fixed skills install flow.
@@ -118,8 +127,7 @@ Concretely next:
 
 ## OPEN QUESTIONS / BLOCKERS
 
-- [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Still confirm in B0-1 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
-- [ ] PKG-3 execution remains: run the framework-vs-project dry-run on a throwaway repo (`PROJECT_BRIEF.md` + planner invocation + clean project-tree verification).
+- [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Confirm in B0-4 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
 - [ ] Push/auth blocker in this environment: local commits are ready (latest `cb97af5` includes PKG-1/PKG-2 reconciliation), but `git push` fails against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
 
 ### Resolved
