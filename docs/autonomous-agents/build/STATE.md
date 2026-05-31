@@ -6,23 +6,23 @@
 
 ## CURRENT STATUS
 
-- **Phase:** B0 foundations in progress; B0-2 project skeleton completed, next is B0-3 GitHub backbone
-- **Active task:** _B0-2 completed in this session (skeleton + setup + green checks); next start is B0-3_
+- **Phase:** B0 foundations in progress; B0-3 GitHub backbone implemented locally, remote enforcement verification blocked by missing GitHub CLI/auth in this environment
+- **Active task:** _B0-3 in progress: CI + templates + enforcement script added; need remote GitHub verification_
 - **Build branch:** `claude/autonomous-agent-framework-5MdEG` _(holds the handover package, prompts, tap scaffold, and project bootstrap assets; build here, keep `master` untouched)_
-- **Build health:** _B0-2 skeleton now present (`pyproject.toml`, `scripts/setup.sh`, `core/` package layout, placeholder tests). Local validation green: `pytest`, `ruff check .`, `black --check .`, `mypy core tests`._
+- **Build health:** _Local validation green after B0-3 artifacts: `pytest`, `ruff check .`, `black --check .`, `mypy core tests`._
 - **Real provider keys present?:** _unknown — assume NO; use the mock provider until told otherwise_
 
 ---
 
 ## ▶ NEXT SESSION STARTS HERE
 
-**Task B0-3 — GitHub backbone.**
-B0-2 is complete.
+**Task B0-3 — finish remote verification, then move to B0-4.**
+B0-3 artifacts are now added locally (CI workflow, templates, labels, branch-protection script/docs).
 Concretely next:
-1. Add CI workflow under `.github/workflows/` that runs lint/type/tests on pushes and PRs.
-2. Add GitHub issue + PR templates and align with AMA routing contract.
-3. Document/enforce trunk protection requirements for `main` (PR required, CI required, no direct push).
-4. Validate with a throwaway PR flow where possible, or record exact blockers if GitHub auth/push remains unavailable.
+1. Install/configure `gh` CLI and authenticate for this environment.
+2. Run `scripts/configure_github_backbone.sh <owner/repo>` to apply labels + branch protection on `main`.
+3. Open a throwaway PR to verify merge is blocked until `lint-type-test` is green and review exists.
+4. If verification succeeds, mark B0-3 complete and start B0-4 model gateway scaffold.
 
 ---
 
@@ -42,7 +42,7 @@ Concretely next:
 ### Phase B0 — Foundations
 - [x] B0-1 Verify Hermes & reconcile design (ADR-0001)
 - [x] B0-2 Project skeleton (venv, pyproject, lint/type, pytest, structure)
-- [ ] B0-3 GitHub backbone (branch protection, Projects board, labels, CI)
+- [ ] B0-3 GitHub backbone (branch protection, Projects board, labels, CI) _(local artifacts done; remote verification pending)_
 - [ ] B0-4 Model gateway over Hermes (tier→provider, mock provider, smoke tests)
 - [ ] B0-5 State store + checkpoint/resume (SQLite)
 - [ ] B0-6 Telegram channel (send + tap-to-answer)
@@ -65,6 +65,14 @@ Concretely next:
 ---
 
 ## LAST SESSION SUMMARY
+
+### Handoff — 2026-05-31 — B0-3 GitHub backbone local implementation
+- DONE this session: Added `.github/workflows/ci.yml` (job `lint-type-test` for pytest+ruff+black+mypy on push/PR), `.github/ISSUE_TEMPLATE/ama-task.yml`, `.github/PULL_REQUEST_TEMPLATE.md`, and `.github/ama-labels.json` aligned with AMA owner/tier routing contract.
+- DONE this session (ops/docs): Added `scripts/configure_github_backbone.sh` to apply labels and `main` branch protection via GitHub API (`gh api`), plus `docs/autonomous-agents/GITHUB_BACKBONE.md` documenting enforcement and verification flow.
+- STATE: build branch `claude/autonomous-agent-framework-5MdEG`; local quality checks green (`pytest`, `ruff check .`, `black --check .`, `mypy core tests`); remote GitHub enforcement not yet executed from this environment.
+- LEARNED / GOTCHAS: `gh` CLI is not installed here (`gh: command not found`), so throwaway-PR and branch-protection verification cannot be run locally yet.
+- NEXT: install/auth `gh`, run `scripts/configure_github_backbone.sh <owner/repo>`, verify throwaway PR protection behavior, then start B0-4.
+- BLOCKERS / WAITING ON HUMAN: environment currently lacks `gh`; remote verification needs either `gh` installed + auth in this environment or a human-run verification on GitHub.
 
 ### Handoff — 2026-05-31 — B0-2 project skeleton session
 - DONE this session: Implemented B0-2 skeleton artifacts: `pyproject.toml`, executable `scripts/setup.sh`, `.pre-commit-config.yaml`, starter `core/` package layout (`gateway/`, `agents/`, `orchestrator/`, `board/`, `quality/`, `watchdog/`, `human/`, `state/`), and `tests/test_smoke.py`.
@@ -133,7 +141,7 @@ Concretely next:
 ## OPEN QUESTIONS / BLOCKERS
 
 - [ ] Provider keys: AMA itself needs none (it reuses Hermes' configured providers — see Resolved). Confirm in B0-4 whether the **mock provider** path is needed for `core/` tests that run with no Hermes session.
-- [ ] Push/auth blocker in this environment: local commits are ready (latest `cb97af5` includes PKG-1/PKG-2 reconciliation), but `git push` fails against `origin` because GitHub credentials are not configured in this session (`could not read Username for 'https://github.com'`).
+- [ ] GitHub remote verification blocker in this environment: `gh` CLI is not installed (`gh: command not found`), and prior `git push` attempts in this session family also lacked GitHub credentials over HTTPS. Until auth/tooling is available, branch-protection + throwaway-PR verification remains pending.
 
 ### Resolved
 - **B0-1 complete (2026-05-31):** ADR-0001 finalized the Hermes integration boundary: defer runtime routing/sessions/compression concerns to Hermes; keep AMA custom for quota guard, board orchestration protocol, GUI-test flow, orchestrator/state/quality policies.
